@@ -23,5 +23,5 @@ export default function App() {
   };
   if (stage === "landing") return <Landing onStart={() => setStage("discovery")} />;
   if (stage === "workspace" && workspace) return <WorkspaceApp workspace={workspace} setWorkspace={setWorkspace} onReset={() => { reset(); setStage("landing"); }} />;
-  return <Builder stage={stage} analysis={analysis} options={analysis ? generateArchitectureOptions(analysis) : []} selected={selected} onSubmit={begin} onSelect={setSelected} onContinue={() => setStage("suggestions")} onBuild={build} onBack={() => setStage("discovery")} />;
+  return <Builder stage={stage} analysis={analysis} options={analysis ? generateArchitectureOptions(analysis) : []} selected={selected} onSubmit={begin} onSelect={setSelected} onContinue={() => setStage("suggestions")} onBuild={build} onBack={() => setStage("discovery")} onBackToLanding={() => setStage("landing")} onBackToArchitect={() => setStage("architect")} />;
 }
