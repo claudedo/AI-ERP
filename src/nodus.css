@@ -86,6 +86,8 @@ button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
   background: var(--nodus-white); border-color: var(--line); box-shadow: none; border-radius: 11px;
 }
 .kpi>strong, .chart-summary strong { color: var(--nodus-dark); }
+.kpi>small { color: var(--muted); }
+.kpi>small.needs-attention { color: var(--danger); }
 .attention-row { border-color: var(--line-soft); }
 .attention-row:hover { background: var(--surface-soft); }
 .attention-row .blue { background: var(--accent-soft); color: var(--accent); }
