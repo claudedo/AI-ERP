@@ -5,15 +5,15 @@ import { Select as RSelect } from "radix-ui";
 const EMPTY = "__empty__";
 export interface SelectOption { value: string; label: string }
 
-export function Select({ value, onChange, options, placeholder = "Select…", emptyLabel, disabled, size = "md", ariaLabel, id }: {
+export function Select({ value, onChange, options, placeholder = "Select…", emptyLabel, disabled, size = "md", ariaLabel, ariaInvalid, id }: {
   value: string; onChange: (v: string) => void; options: (string | SelectOption)[]; placeholder?: string;
   /** When set, an explicit item that clears the value (e.g. "All statuses"). */
-  emptyLabel?: string; disabled?: boolean; size?: "sm" | "md"; ariaLabel?: string; id?: string;
+  emptyLabel?: string; disabled?: boolean; size?: "sm" | "md"; ariaLabel?: string; ariaInvalid?: boolean; id?: string;
 }) {
   const items = options.map(o => typeof o === "string" ? { value: o, label: o } : o).filter(o => o.value !== "");
   const current = value === "" ? (emptyLabel ? EMPTY : undefined) : value;
   return <RSelect.Root value={current} onValueChange={v => onChange(v === EMPTY ? "" : v)} disabled={disabled}>
-    <RSelect.Trigger className={`ds-select ds-select-${size}`} aria-label={ariaLabel} id={id}>
+    <RSelect.Trigger className={`ds-select ds-select-${size}`} aria-label={ariaLabel} aria-invalid={ariaInvalid || undefined} id={id}>
       <RSelect.Value placeholder={placeholder} />
       <RSelect.Icon className="ds-select-icon"><ChevronsUpDown size={13} /></RSelect.Icon>
     </RSelect.Trigger>
