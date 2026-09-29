@@ -18,7 +18,7 @@ const searchableText=(entity:Entity,record:DataRecord,workspace:Workspace)=>[rec
 
 export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspace;setWorkspace:(w:Workspace)=>void;onReset:()=>void}){
  const [active,setActive]=useState("dashboard"),[assistant,setAssistant]=useState(false),[assistantModeHint,setAssistantModeHint]=useState<"operator"|"builder">("operator"),[mobileNav,setMobileNav]=useState(false),[delayedOnly,setDelayedOnly]=useState(false),[toast,setToast]=useState(""),[confirmReset,setConfirmReset]=useState(false);
- const searchRef=useRef<HTMLInputElement>(null);
+ const searchRef=useRef<HTMLInputElement>(null),menuButtonRef=useRef<HTMLButtonElement>(null),closeNavRef=useRef<HTMLButtonElement>(null);
  const [globalQuery,setGlobalQuery]=useState(""),[tableSearch,setTableSearch]=useState("");
  const currentUser=workspace.users.find(u=>u.id===workspace.currentUserId)||workspace.users[0],role=workspace.roles.find(r=>r.id===currentUser.roleId)||workspace.roles[0],permissions=role.permissions,entity=workspace.entities.find(e=>e.id===active);
  const searchResults=globalQuery.trim()?workspace.entities.flatMap(e=>e.records.filter(r=>searchableText(e,r,workspace).includes(globalQuery.trim().toLowerCase())).map(r=>({entity:e,record:r}))).slice(0,8):[];
@@ -34,13 +34,14 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
 
  // Desktop shortcuts: ⌘K opens AI Builder (admins) or Operator, ⌘/ focuses search, Esc closes mobile nav.
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{const mod=e.metaKey||e.ctrlKey;if(mod&&e.key.toLowerCase()==="k"){e.preventDefault();openAssistant(permissions.editStructure?"builder":"operator")}else if(mod&&e.key==="/"){e.preventDefault();searchRef.current?.focus()}else if(e.key==="Escape")setMobileNav(false)};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[permissions.editStructure]);
+ useEffect(()=>{if(!mobileNav)return;closeNavRef.current?.focus();return()=>menuButtonRef.current?.focus()},[mobileNav]);
 
  const navItem=(id:string,icon:ReactNode,label:string,meta?:ReactNode)=><button key={id} className={active===id?"active":""} aria-current={active===id?"page":undefined} onClick={()=>go(id)}>{icon}<span>{label}</span>{meta}</button>;
 
  return <Tooltip.Provider delayDuration={400} skipDelayDuration={150}><div className="app-shell">
   {mobileNav&&<div className="sidebar-scrim" onClick={()=>setMobileNav(false)} aria-hidden/>}
-  <aside className={`sidebar ${mobileNav?"open":""}`} aria-label="Workspace navigation">
-   <div className="sidebar-brand"><div className="brand-copy"><NodusLogo variant="lockup"/><small>CONNECTED OPERATIONS</small></div><button className="mobile-close" aria-label="Close navigation" onClick={()=>setMobileNav(false)}><X/></button></div>
+  <aside id="workspace-navigation" className={`sidebar ${mobileNav?"open":""}`} role={mobileNav?"dialog":undefined} aria-modal={mobileNav?true:undefined} aria-label="Workspace navigation">
+   <div className="sidebar-brand"><div className="brand-copy"><NodusLogo variant="lockup"/><small>CONNECTED OPERATIONS</small></div><button ref={closeNavRef} className="mobile-close" aria-label="Close navigation" onClick={()=>setMobileNav(false)}><X/></button></div>
    <DropdownMenu.Root><DropdownMenu.Trigger asChild><button className="workspace-switch" aria-label="Workspace menu"><div className="company-avatar">{workspace.companyName.slice(0,2).toUpperCase()}</div><div><strong>{workspace.companyName}</strong><small>{industryLabel(workspace.industry)} workspace</small></div><ChevronsUpDown size={14}/></button></DropdownMenu.Trigger>
     <DropdownMenu.Portal><DropdownMenu.Content className="ds-menu" sideOffset={4} align="start" collisionPadding={8}>
      <DropdownMenu.Label className="ds-menu-label">{workspace.companyName} · {workspace.architecture}</DropdownMenu.Label>
@@ -76,10 +77,10 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
     </div>
    </div>
   </aside>
-  <main className="workspace-main">
+  <main className="workspace-main" inert={mobileNav}>
    <header className="topbar">
-    <button className="menu-btn" aria-label="Open navigation" onClick={()=>setMobileNav(true)}><Menu/></button>
-    <div className="global-search"><Search/><input ref={searchRef} value={globalQuery} onChange={e=>setGlobalQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchResults[0])openSearchResult(searchResults[0].entity.id);if(e.key==="Escape")setGlobalQuery("")}} placeholder="Search anything..." aria-label="Search all workspace records" autoComplete="off"/><kbd>⌘/</kbd>{globalQuery.trim()&&<div className="global-search-results" role="status">{searchResults.length?searchResults.map(({entity,record})=><button key={`${entity.id}:${record.id}`} onClick={()=>openSearchResult(entity.id)}><strong>{recordLabel(entity,record)}</strong><span>{entity.name}</span></button>):<p>No matching records</p>}</div>}</div>
+    <button ref={menuButtonRef} className="menu-btn" aria-label="Open navigation" aria-controls="workspace-navigation" aria-expanded={mobileNav} onClick={()=>setMobileNav(true)}><Menu/></button>
+    <div className="global-search"><Search/><input ref={searchRef} value={globalQuery} onChange={e=>setGlobalQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchResults[0])openSearchResult(searchResults[0].entity.id);if(e.key==="Escape")setGlobalQuery("")}} placeholder="Search anything..." aria-label="Search all workspace records" aria-controls={globalQuery.trim()?"workspace-search-results":undefined} autoComplete="off"/><kbd>⌘/</kbd>{globalQuery.trim()&&<div id="workspace-search-results" className="global-search-results" role="region" aria-label="Search results">{searchResults.length?searchResults.map(({entity,record})=><button key={`${entity.id}:${record.id}`} onClick={()=>openSearchResult(entity.id)}><strong>{recordLabel(entity,record)}</strong><span>{entity.name}</span></button>):<p role="status">No matching records</p>}</div>}</div>
     <div className="permission-badge"><span>{role.name}</span>{!permissions.editRecords&&<small>Read only</small>}</div>
     <div className="top-actions">
      <Popover.Root><Hint label="Notifications"><Popover.Trigger asChild><button aria-label={`Notifications, ${workspace.alerts.length} alerts`} className="icon-button"><Bell/>{workspace.alerts.length>0&&<span className="badge-dot">{workspace.alerts.length}</span>}</button></Popover.Trigger></Hint>

@@ -46,4 +46,27 @@
   --shadow-md: 0 8px 25px rgba(50, 16, 26, .055);
   --shadow-menu: 0 12px 30px rgba(50, 16, 26, .10);
   --shadow-panel: -8px 0 32px rgba(50, 16, 26, .08);
+
+  /* Workspace rhythm and interaction tokens; brand colors above stay unchanged. */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+  --ui-sidebar-width: 232px;
+  --ui-topbar-height: 56px;
+  --ui-control-height: 34px;
+  --ui-row-height: 42px;
+  --ui-content-width: 1420px;
+  --ui-focus-width: 2px;
+  --ui-transition-fast: 120ms ease;
+  --ui-transition-panel: 180ms cubic-bezier(.2, .8, .2, 1);
+  --ui-z-topbar: 5;
+  --ui-z-sidebar: 10;
+  --ui-z-popover: 80;
+  --ui-z-overlay: 90;
+  --ui-z-dialog: 91;
+  --ui-z-toast: 130;
 }
