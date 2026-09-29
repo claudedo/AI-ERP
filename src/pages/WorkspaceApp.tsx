@@ -10,20 +10,26 @@ import { UsersRolesPage } from "../components/UsersRolesPage";
 import { AssistantPanel } from "../components/AssistantPanel";
 import { Hint } from "../components/ui/Hint";
 import { NodusLogo } from "../components/NodusLogo";
+import { recordLabel } from "../components/RecordDrawer";
 
 const iconFor=(name:string)=>/customer|client|lead|owner/i.test(name)?<Users/>:/analytic/i.test(name)?<BarChart3/>:/deliver|logistic/i.test(name)?<Truck/>:<Blocks/>;
+const industryLabel=(industry:string)=>({fashion:"Fashion",furniture:"Furniture",realestate:"Real estate",consulting:"Consulting",generic:"General"})[industry as "fashion"|"furniture"|"realestate"|"consulting"|"generic"]||industry;
+const searchableText=(entity:Entity,record:DataRecord,workspace:Workspace)=>[recordLabel(entity,record),...entity.fields.map(f=>{const value=record[f.id];if(f.type==="relation"&&f.relationEntityId){const target=workspace.entities.find(e=>e.id===f.relationEntityId),linked=target?.records.find(r=>r.id===value);return linked&&target?recordLabel(target,linked):String(value??"")}return String(value??"")})].join(" ").toLowerCase();
 
 export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspace;setWorkspace:(w:Workspace)=>void;onReset:()=>void}){
  const [active,setActive]=useState("dashboard"),[assistant,setAssistant]=useState(false),[assistantModeHint,setAssistantModeHint]=useState<"operator"|"builder">("operator"),[mobileNav,setMobileNav]=useState(false),[delayedOnly,setDelayedOnly]=useState(false),[toast,setToast]=useState(""),[confirmReset,setConfirmReset]=useState(false);
  const searchRef=useRef<HTMLInputElement>(null);
+ const [globalQuery,setGlobalQuery]=useState(""),[tableSearch,setTableSearch]=useState("");
  const currentUser=workspace.users.find(u=>u.id===workspace.currentUserId)||workspace.users[0],role=workspace.roles.find(r=>r.id===currentUser.roleId)||workspace.roles[0],permissions=role.permissions,entity=workspace.entities.find(e=>e.id===active);
+ const searchResults=globalQuery.trim()?workspace.entities.flatMap(e=>e.records.filter(r=>searchableText(e,r,workspace).includes(globalQuery.trim().toLowerCase())).map(r=>({entity:e,record:r}))).slice(0,8):[];
  const notify=(message:string)=>{setToast(message);window.setTimeout(()=>setToast(""),2800)};
  const updateEntity=(changed:Entity)=>setWorkspace({...workspace,entities:workspace.entities.map(e=>e.id===changed.id?changed:e),alerts:deriveAlerts(workspace.entities.map(e=>e.id===changed.id?changed:e))});
  const saveRecord=(record:DataRecord)=>{if(!entity)return;const previous=entity.records.find(r=>r.id===record.id),exists=Boolean(previous),changed={...entity,records:exists?entity.records.map(r=>r.id===record.id?record:r):[record,...entity.records]};let next={...workspace,entities:workspace.entities.map(e=>e.id===changed.id?changed:e)};next=runWorkflows(next,entity,record,previous);next.alerts=deriveAlerts(next.entities);setWorkspace(next);notify(exists?"Record updated":"Record created")};
  const deleteRecord=(id:string)=>{if(!entity)return;updateEntity({...entity,records:entity.records.filter(r=>r.id!==id)});notify("Record deleted")};
  const saveView=(view:View)=>{setWorkspace({...workspace,views:[...workspace.views,view]});notify("View saved")};
  const openAssistant=(hint:"operator"|"builder"="operator")=>{setAssistantModeHint(hint);setAssistant(true)};
- const go=(id:string)=>{setActive(id);setDelayedOnly(false);setMobileNav(false)};
+ const go=(id:string)=>{setActive(id);setDelayedOnly(false);setMobileNav(false);setTableSearch("")};
+ const openSearchResult=(id:string)=>{const query=globalQuery.trim();go(id);setTableSearch(query);setGlobalQuery("");searchRef.current?.blur()};
  const switchUser=(id:string)=>{setWorkspace({...workspace,currentUserId:id});notify("Demo user switched")};
 
  // Desktop shortcuts: ⌘K opens AI Builder (admins) or Operator, ⌘/ focuses search, Esc closes mobile nav.
@@ -35,7 +41,7 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
   {mobileNav&&<div className="sidebar-scrim" onClick={()=>setMobileNav(false)} aria-hidden/>}
   <aside className={`sidebar ${mobileNav?"open":""}`} aria-label="Workspace navigation">
    <div className="sidebar-brand"><div className="brand-copy"><NodusLogo variant="lockup"/><small>CONNECTED OPERATIONS</small></div><button className="mobile-close" aria-label="Close navigation" onClick={()=>setMobileNav(false)}><X/></button></div>
-   <DropdownMenu.Root><DropdownMenu.Trigger asChild><button className="workspace-switch" aria-label="Workspace menu"><div className="company-avatar">{workspace.companyName.slice(0,2).toUpperCase()}</div><div><strong>{workspace.companyName}</strong><small>{workspace.industry} workspace</small></div><ChevronsUpDown size={14}/></button></DropdownMenu.Trigger>
+   <DropdownMenu.Root><DropdownMenu.Trigger asChild><button className="workspace-switch" aria-label="Workspace menu"><div className="company-avatar">{workspace.companyName.slice(0,2).toUpperCase()}</div><div><strong>{workspace.companyName}</strong><small>{industryLabel(workspace.industry)} workspace</small></div><ChevronsUpDown size={14}/></button></DropdownMenu.Trigger>
     <DropdownMenu.Portal><DropdownMenu.Content className="ds-menu" sideOffset={4} align="start" collisionPadding={8}>
      <DropdownMenu.Label className="ds-menu-label">{workspace.companyName} · {workspace.architecture}</DropdownMenu.Label>
      <DropdownMenu.Item className="ds-menu-item" onSelect={()=>go("dashboard")}><LayoutDashboard/>Dashboard</DropdownMenu.Item>
@@ -73,7 +79,7 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
   <main className="workspace-main">
    <header className="topbar">
     <button className="menu-btn" aria-label="Open navigation" onClick={()=>setMobileNav(true)}><Menu/></button>
-    <div className="global-search"><Search/><input ref={searchRef} placeholder="Search anything..." aria-label="Search"/><kbd>⌘/</kbd></div>
+    <div className="global-search"><Search/><input ref={searchRef} value={globalQuery} onChange={e=>setGlobalQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&searchResults[0])openSearchResult(searchResults[0].entity.id);if(e.key==="Escape")setGlobalQuery("")}} placeholder="Search anything..." aria-label="Search all workspace records" autoComplete="off"/><kbd>⌘/</kbd>{globalQuery.trim()&&<div className="global-search-results" role="status">{searchResults.length?searchResults.map(({entity,record})=><button key={`${entity.id}:${record.id}`} onClick={()=>openSearchResult(entity.id)}><strong>{recordLabel(entity,record)}</strong><span>{entity.name}</span></button>):<p>No matching records</p>}</div>}</div>
     <div className="permission-badge"><span>{role.name}</span>{!permissions.editRecords&&<small>Read only</small>}</div>
     <div className="top-actions">
      <Popover.Root><Hint label="Notifications"><Popover.Trigger asChild><button aria-label={`Notifications, ${workspace.alerts.length} alerts`} className="icon-button"><Bell/>{workspace.alerts.length>0&&<span className="badge-dot">{workspace.alerts.length}</span>}</button></Popover.Trigger></Hint>
@@ -86,7 +92,7 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
     </div>
    </header>
    {active==="dashboard"&&<Dashboard workspace={workspace} onAsk={()=>openAssistant("operator")} onOpen={go}/>}
-   {entity&&<EntityTable key={entity.id} entity={entity} workspace={workspace} canEdit={permissions.editRecords} canDelete={permissions.deleteRecords} delayedOnly={delayedOnly} onClearDelayed={()=>setDelayedOnly(false)} onSaveRecord={saveRecord} onDeleteRecord={deleteRecord} onSaveView={saveView}/>}
+   {entity&&<EntityTable key={entity.id} entity={entity} workspace={workspace} initialSearch={tableSearch} canEdit={permissions.editRecords} canDelete={permissions.deleteRecords} delayedOnly={delayedOnly} onClearDelayed={()=>setDelayedOnly(false)} onSaveRecord={saveRecord} onDeleteRecord={deleteRecord} onSaveView={saveView}/>}
    {active==="automations"&&<AutomationsPage workflows={workspace.workflows} canEdit={permissions.editStructure} onCreate={()=>openAssistant("builder")} onToggle={id=>{setWorkspace({...workspace,workflows:workspace.workflows.map(w=>w.id===id?{...w,active:!w.active}:w)});notify("Automation updated")}}/>}
    {active==="users"&&<UsersRolesPage workspace={workspace} canManage={permissions.manageUsers} onSwitch={switchUser}/>}
    {active==="history"&&<HistoryPage workspace={workspace}/>}

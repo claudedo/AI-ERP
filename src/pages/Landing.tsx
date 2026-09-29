@@ -3,7 +3,7 @@ import { NodusLogo } from "../components/NodusLogo";
 
 export function Landing({ onStart }: { onStart: () => void }) {
   return <main className="landing">
-    <nav className="nav"><a className="brand" href="#" aria-label="NODUS home"><NodusLogo variant="lockup"/></a><button className="text-button" onClick={onStart}>Enter workspace</button></nav>
+    <nav className="nav"><a className="brand" href="#" aria-label="NODUS home"><NodusLogo variant="lockup"/></a><button className="text-button" onClick={onStart}>Create workspace</button></nav>
     <section className="hero">
       <div className="hero-identity"><NodusLogo variant="lockup"/><span>THE INTELLIGENT OPERATING SYSTEM</span></div>
       <div className="eyebrow">STRUCTURE FOR WHAT MOVES YOU</div>

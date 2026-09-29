@@ -12,6 +12,7 @@ export default function App() {
   const [stage, setStage] = useState<Stage>(workspace ? "workspace" : "landing");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [selected, setSelected] = useState<ArchitectureOption | null>(null);
+  const [automation, setAutomation] = useState(true);
 
   const begin = (description: string) => {
     const result = analyzeBusiness(description); setAnalysis(result); setStage("analysis");
@@ -19,9 +20,9 @@ export default function App() {
   };
   const build = () => {
     if (!analysis || !selected) return; setStage("building");
-    window.setTimeout(() => { setWorkspace(generateWorkspace(analysis, selected)); setStage("workspace"); }, 3300);
+    window.setTimeout(() => { const next=generateWorkspace(analysis, selected); if(!automation)next.workflows=next.workflows.map(w=>w.id==="confirmed-order-task"?{...w,active:false}:w); setWorkspace(next); setStage("workspace"); }, 3300);
   };
   if (stage === "landing") return <Landing onStart={() => setStage("discovery")} />;
   if (stage === "workspace" && workspace) return <WorkspaceApp workspace={workspace} setWorkspace={setWorkspace} onReset={() => { reset(); setStage("landing"); }} />;
-  return <Builder stage={stage} analysis={analysis} options={analysis ? generateArchitectureOptions(analysis) : []} selected={selected} onSubmit={begin} onSelect={setSelected} onContinue={() => setStage("suggestions")} onBuild={build} onBack={() => setStage("discovery")} onBackToLanding={() => setStage("landing")} onBackToArchitect={() => setStage("architect")} />;
+  return <Builder stage={stage} analysis={analysis} options={analysis ? generateArchitectureOptions(analysis) : []} selected={selected} automation={automation} onAutomationChange={setAutomation} onSubmit={begin} onSelect={setSelected} onContinue={() => setStage("suggestions")} onBuild={build} onBack={() => setStage("discovery")} onBackToLanding={() => setStage("landing")} onBackToArchitect={() => setStage("architect")} />;
 }

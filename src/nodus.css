@@ -75,6 +75,12 @@ button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .user { border-color: var(--line); }
 .topbar { background: var(--nodus-white); backdrop-filter: none; }
 .global-search { background: var(--surface-soft); border-color: var(--line); }
+.global-search { position: relative; }
+.global-search-results { position: absolute; top: calc(100% + 7px); left: 0; width: min(420px, calc(100vw - 32px)); padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-menu); z-index: 30; }
+.global-search-results button { width: 100%; display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink); text-align: left; }
+.global-search-results button:hover, .global-search-results button:focus-visible { background: var(--accent-soft); color: var(--accent); }
+.global-search-results span, .global-search-results p { color: var(--muted); }
+.global-search-results p { margin: 8px 10px; }
 .global-search:focus-within, .table-search:focus-within, .assistant-input:focus-within { border-color: var(--accent); box-shadow: var(--focus-ring); }
 .top-actions .assistant-top { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
 .top-actions .assistant-top .nodus-logo--mark { width: 17px; height: 17px; }
@@ -103,6 +109,10 @@ tbody tr:hover { background: #F8F0E8 !important; }
 .relation-cell, .workflow-card footer button, .role-grid svg { color: var(--accent); }
 .user-card.selected, .view-tab.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(101,31,50,.08); }
 .workflow-icon, .proposal-card { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.workflow-history { margin-top: 10px; border-top: 1px solid var(--line); }
+.workflow-history>div { display: grid; grid-template-columns: 130px 62px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); font-size: 11px; color: var(--ink-2); }
+.workflow-history time { color: var(--muted); }
+.workflow-history strong { text-transform: capitalize; color: var(--accent); }
 .proposal-label, .proposal-impact svg { color: var(--accent); }
 .proposal-impact { border-color: var(--line); }
 
