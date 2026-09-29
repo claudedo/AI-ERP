@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 64" role="img" aria-labelledby="title">
+  <title id="title">NODUS lockup</title>
+  <g fill="none" stroke="#651F32" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 12C19 12 17 19 23 24S29 28 32 32M52 12C44 12 51 23 43 28S36 32 32 32M12 52C20 52 14 42 21 37S28 33 32 32M52 52C45 52 46 46 40 40S35 35 32 32"/>
+  </g>
+  <g fill="#651F32">
+    <circle cx="32" cy="32" r="9.4"/>
+    <circle cx="12" cy="12" r="6.8"/>
+    <circle cx="52" cy="12" r="6.8"/>
+    <circle cx="12" cy="52" r="6.8"/>
+    <circle cx="52" cy="52" r="6.8"/>
+  </g>
+  <text x="78" y="47" fill="#32101A" font-family="Didot, 'Bodoni 72', 'Times New Roman', serif" font-size="43" font-weight="400" letter-spacing="5.2">NODUS</text>
+</svg>

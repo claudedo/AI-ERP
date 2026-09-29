@@ -1,0 +1,130 @@
+/* NODUS — editorial shell and product surfaces */
+html, body { background: var(--canvas); color: var(--ink); }
+button, input, textarea, select { font-family: var(--font-sans); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
+.primary { background: var(--accent); border-color: var(--accent); border-radius: 8px; box-shadow: none; }
+.primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(50,16,26,.11); }
+.secondary, .text-button, .table-tools button, .top-actions button { background: var(--surface); border-color: var(--line); box-shadow: none; }
+.secondary:hover, .text-button:hover, .table-tools button:hover, .top-actions button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
+
+.nodus-logo { display: block; object-fit: contain; flex: none; }
+.nodus-logo--mark { width: 24px; height: 24px; }
+.nodus-logo--wordmark { width: min(410px, 76vw); height: auto; }
+.nodus-logo--lockup { width: 142px; height: auto; }
+.brand { font-family: var(--font-display); color: var(--accent); }
+.brand .nodus-logo--lockup { width: 154px; }
+
+/* Landing: quiet typography and a process blueprint */
+.landing { background: var(--nodus-cream); }
+.nav { background: var(--nodus-cream); backdrop-filter: none; border-color: var(--line); }
+.hero { padding-top: 76px; }
+.hero-identity { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hero-identity .nodus-logo--lockup { width: min(350px, 80vw); }
+.hero-identity span { font-size: 10px; font-weight: 650; letter-spacing: .19em; color: var(--muted); }
+.eyebrow, .ai-label { background: var(--nodus-white); border-color: var(--line); box-shadow: none; color: var(--accent); border-radius: 7px; }
+.hero h1 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.04em; color: var(--nodus-dark); max-width: 850px; margin-top: 26px; }
+.hero>p { color: var(--muted); }
+.concept-flow { background: var(--nodus-white); border-color: var(--line); box-shadow: var(--shadow-md); backdrop-filter: none; border-radius: 13px; gap: 0; }
+.concept-flow>div { border-radius: 8px; border: 1px solid transparent; }
+.concept-flow>div.featured { background: var(--nodus-cream); border-color: var(--line); }
+.concept-flow>i { color: var(--nodus-rose); font-size: 20px; }
+.concept-flow strong { color: var(--nodus-dark); font-weight: 600; }
+.concept-flow small, .concept-flow span { color: var(--muted); }
+.landing-footer { border-color: var(--line); color: var(--muted); }
+
+/* Architect onboarding */
+.builder-shell { background: var(--canvas); }
+.builder-header { background: var(--nodus-white); backdrop-filter: none; }
+.builder-progress span.active, .builder-progress span.done { color: var(--accent); }
+.builder-progress span.done:before { color: var(--accent); }
+.panel-page h2, .loading-view h2 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.025em; color: var(--nodus-dark); }
+.discovery textarea { background: var(--nodus-white); border-color: var(--line-strong); border-radius: 10px; box-shadow: none; }
+.discovery textarea:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+.example-row button, .process-map, .suggestion-card { background: var(--nodus-white); border-color: var(--line); box-shadow: none; }
+.example-row button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
+.loader-orbit, .loading-view .loader-orbit { background: var(--nodus-cream); border-color: var(--accent-line); box-shadow: none; }
+.loader-orbit:before { border-color: var(--nodus-rose); }
+.steps .current { color: var(--accent); }
+.steps .current span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: none; }
+.architecture-card { background: var(--nodus-white); border-color: var(--line); border-radius: 12px; box-shadow: none; }
+.architecture-card:hover { border-color: var(--nodus-rose); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.architecture-card.selected { border-color: var(--accent); background: #FCF7F1; box-shadow: 0 0 0 2px rgba(101,31,50,.09); }
+.architecture-card h3 { font-family: var(--font-display); font-size: 27px; font-weight: 400; color: var(--nodus-dark); }
+.architecture-card .card-top, .complexity { color: var(--muted); }
+.module-list span, .workflow-flow b, .map-chain span, .map-branches span { background: var(--surface-soft); border-color: var(--line); color: var(--ink-2); }
+.suggestion-icon { background: var(--accent-soft); color: var(--accent); }
+.suggestion-type { color: var(--accent); }
+.suggestion-card { border-radius: 11px; }
+
+/* Workspace chrome */
+.app-shell { background: var(--canvas); }
+.sidebar { background: var(--nodus-cream); color: var(--ink-2); border-right: 1px solid var(--line); }
+.sidebar-brand { min-height: 57px; height: auto; }
+.sidebar-brand .nodus-logo--lockup { width: 132px; }
+.sidebar-brand small, .sidebar nav .nav-label { color: var(--muted); }
+.workspace-switch { background: var(--nodus-white); border-color: var(--line); box-shadow: none; }
+.workspace-switch strong, .user strong { color: var(--nodus-dark); }
+.company-avatar { background: var(--accent); color: var(--nodus-white); }
+.sidebar nav button, .sidebar-bottom>button { color: var(--ink-2); }
+.sidebar nav button:hover, .sidebar-bottom>button:hover { background: rgba(101,31,50,.055); color: var(--accent); }
+.sidebar nav button.active { background: var(--nodus-white); color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.sidebar nav button em, .global-search kbd, .sidebar-bottom kbd { background: var(--nodus-sand); color: var(--ink-2); border-color: var(--line); }
+.user { border-color: var(--line); }
+.topbar { background: var(--nodus-white); backdrop-filter: none; }
+.global-search { background: var(--surface-soft); border-color: var(--line); }
+.global-search:focus-within, .table-search:focus-within, .assistant-input:focus-within { border-color: var(--accent); box-shadow: var(--focus-ring); }
+.top-actions .assistant-top { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.top-actions .assistant-top .nodus-logo--mark { width: 17px; height: 17px; }
+.avatar, .large-avatar { background: var(--nodus-sand); color: var(--accent); }
+
+/* Data, controls and status */
+.page-heading h1 { color: var(--nodus-dark); }
+.kpi, .chart-card, .attention, .activity-card, .table-card, .workflow-card, .role-grid article, .user-card, .automation-summary>div, .history-list {
+  background: var(--nodus-white); border-color: var(--line); box-shadow: none; border-radius: 11px;
+}
+.kpi>strong, .chart-summary strong { color: var(--nodus-dark); }
+.attention-row { border-color: var(--line-soft); }
+.attention-row:hover { background: var(--surface-soft); }
+.attention-row .blue { background: var(--accent-soft); color: var(--accent); }
+.table-tools, .table-footer { background: var(--nodus-white); }
+.table-search { background: var(--surface); border-color: var(--line); box-shadow: none; }
+.table-tools .filter-chip, .filter-chip { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
+th { background: var(--surface-soft); color: var(--muted); border-color: var(--line-soft); }
+td { color: var(--ink-2); border-color: var(--line-soft); }
+td strong { color: var(--nodus-dark); }
+tbody tr:hover { background: #F8F0E8 !important; }
+.status-pill { background: var(--surface-sunken); color: var(--ink-2); border-color: var(--line); }
+.status-pill.in-production, .status-pill.quality-check, .status-pill.on-track { background: var(--accent-soft); color: var(--accent); }
+.relation-cell, .workflow-card footer button, .role-grid svg { color: var(--accent); }
+.user-card.selected, .view-tab.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(101,31,50,.08); }
+.workflow-icon, .proposal-card { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+.proposal-label, .proposal-impact svg { color: var(--accent); }
+.proposal-impact { border-color: var(--line); }
+
+/* Assistant, menus and overlays */
+.assistant-panel, .record-drawer, .confirm-box, .popover, .ds-menu { background: var(--nodus-white); border-color: var(--line); backdrop-filter: none; }
+.drawer-overlay, .assistant-overlay, .alert-overlay { background: rgba(50,16,26,.27); backdrop-filter: none; }
+.mode-switch { background: var(--nodus-cream); border-color: var(--line); }
+.mode-switch button[data-state=active], .mode-switch button.active { background: var(--nodus-white); color: var(--accent); }
+.ai-message>span, .assistant-panel>header>div>span { background: var(--accent-soft); color: var(--accent); }
+.ai-message p { background: var(--surface-soft); color: var(--ink-2); }
+.user-message { background: var(--accent); color: var(--nodus-white); }
+.prompt-list button, .assistant-input, .drawer-fields input, .drawer-fields select { background: var(--nodus-white); border-color: var(--line); }
+.prompt-list button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
+.record-drawer>footer { background: var(--surface-soft); }
+.tooltip-content { background: var(--nodus-dark); }
+.tooltip-content svg { fill: var(--nodus-dark); }
+.toast { background: var(--nodus-dark); border-color: var(--nodus-dark); }
+.ds-menu-item[data-highlighted] { background: var(--accent-soft); color: var(--accent); }
+
+@media (max-width: 680px) {
+  .nav { padding-inline: 20px; }
+  .hero { padding-top: 56px; }
+  .hero h1 { font-size: clamp(42px, 11vw, 62px); }
+  .concept-flow { margin-top: 52px; }
+  .sidebar { box-shadow: 10px 0 30px rgba(50,16,26,.10); }
+  .dashboard, .entity-page { padding: 18px; }
+}

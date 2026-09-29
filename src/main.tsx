@@ -4,6 +4,8 @@ import App from "./App";
 import { localWorkspaceRepository } from "./services/workspaceStorage";
 import "./styles.css";
 import "./design-system.css";
+import "./nodus-tokens.css";
+import "./nodus.css";
 
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{hasError:boolean}>{
   state={hasError:false};

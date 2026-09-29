@@ -1,0 +1,49 @@
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Didot, "Bodoni 72", "Times New Roman", serif;
+
+  --nodus-bordeaux: #651F32;
+  --nodus-dark: #32101A;
+  --nodus-cream: #F4EBDD;
+  --nodus-sand: #E8DACA;
+  --nodus-rose: #B9828F;
+  --nodus-white: #FFFCF7;
+  --nodus-muted: #71666A;
+  --nodus-line: rgba(101, 31, 50, .14);
+
+  --ink: var(--nodus-dark);
+  --ink-2: #543F45;
+  --muted: var(--nodus-muted);
+  --muted-2: #97898D;
+  --canvas: #F9F5EF;
+  --surface: var(--nodus-white);
+  --surface-soft: #F8F1E8;
+  --surface-sunken: var(--nodus-cream);
+  --surface-raised: var(--nodus-white);
+  --sidebar: var(--nodus-cream);
+  --line: var(--nodus-line);
+  --line-soft: rgba(101, 31, 50, .09);
+  --line-strong: rgba(101, 31, 50, .24);
+  --accent: var(--nodus-bordeaux);
+  --accent-hover: #4D1727;
+  --accent-soft: #F4E8E9;
+  --accent-line: #D8BFC4;
+  --accent-ink: var(--nodus-white);
+  --panel: var(--surface);
+  --soft: var(--surface-soft);
+  --blue: var(--accent);
+  --blue2: var(--accent-hover);
+  --hover: rgba(101, 31, 50, .045);
+  --pressed: rgba(101, 31, 50, .085);
+  --selected: var(--accent-soft);
+  --focus-ring: 0 0 0 3px rgba(101, 31, 50, .18);
+  --disabled-opacity: .46;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 13px;
+  --shadow-sm: 0 1px 2px rgba(50, 16, 26, .035);
+  --shadow-md: 0 8px 25px rgba(50, 16, 26, .055);
+  --shadow-menu: 0 12px 30px rgba(50, 16, 26, .10);
+  --shadow-panel: -8px 0 32px rgba(50, 16, 26, .08);
+}

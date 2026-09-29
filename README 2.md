@@ -1,4 +1,4 @@
-# AI Business OS
+# NODUS
 
 A working React prototype for an AI-generated business management platform. A company describes how it works, compares three proposed system architectures, reviews AI suggestions, and enters a configurable workspace with demo data.
 

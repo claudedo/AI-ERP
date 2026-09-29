@@ -1,6 +1,10 @@
-# AI Business OS
+# NODUS
 
-AI Business OS is a functional SaaS prototype that turns a description of how a company works into a configurable management workspace. The demo works without an AI key: its business analysis and workspace changes use a deterministic rules engine designed to be replaceable by real API calls.
+NODUS is a functional B2B SaaS prototype that connects a company's processes into a configurable, AI-designed management workspace. The demo works without an AI key: its business analysis and workspace changes use a deterministic rules engine designed to be replaceable by real API calls.
+
+## Visual identity
+
+NODUS pairs a custom four-connection node symbol with an uppercase editorial wordmark. Its design tokens live in `src/nodus-tokens.css`: bordeaux, cream, sand and warm-white surfaces, restrained borders and shadows, moderate radii, and accessible interaction states. Didot (with system serif fallbacks) is reserved for the wordmark and editorial headlines; functional UI uses a system sans stack. The original SVG variants live in `public/nodus-mark.svg`, `public/nodus-wordmark.svg` and `public/nodus-lockup.svg`.
 
 ## Implemented product flow
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertCircle, BarChart3, Bell, Blocks, Bot, Check, ChevronsUpDown, History, LayoutDashboard, LogOut, Menu, MoreHorizontal, RotateCcw, Search, Sparkles, Truck, UserCog, Users, WandSparkles, X, Zap } from "lucide-react";
+import { AlertCircle, BarChart3, Bell, Blocks, Check, ChevronsUpDown, GitBranch, History, LayoutDashboard, LogOut, Menu, MoreHorizontal, RotateCcw, Search, Truck, UserCog, Users, X, Zap } from "lucide-react";
 import { AlertDialog, DropdownMenu, Popover, Tooltip } from "radix-ui";
 import type { DataRecord, Entity, View, Workspace } from "../types";
 import { deriveAlerts } from "../services/aiEngine";
@@ -9,6 +9,7 @@ import { AutomationsPage } from "../components/AutomationsPage";
 import { UsersRolesPage } from "../components/UsersRolesPage";
 import { AssistantPanel } from "../components/AssistantPanel";
 import { Hint } from "../components/ui/Hint";
+import { NodusLogo } from "../components/NodusLogo";
 
 const iconFor=(name:string)=>/customer|client|lead|owner/i.test(name)?<Users/>:/analytic/i.test(name)?<BarChart3/>:/deliver|logistic/i.test(name)?<Truck/>:<Blocks/>;
 
@@ -33,7 +34,7 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
  return <Tooltip.Provider delayDuration={400} skipDelayDuration={150}><div className="app-shell">
   {mobileNav&&<div className="sidebar-scrim" onClick={()=>setMobileNav(false)} aria-hidden/>}
   <aside className={`sidebar ${mobileNav?"open":""}`} aria-label="Workspace navigation">
-   <div className="sidebar-brand"><span className="brand-mark"><Blocks size={17}/></span><div><strong>AI Business OS</strong><small>Adaptive workspace</small></div><button className="mobile-close" aria-label="Close navigation" onClick={()=>setMobileNav(false)}><X/></button></div>
+   <div className="sidebar-brand"><div className="brand-copy"><NodusLogo variant="lockup"/><small>CONNECTED OPERATIONS</small></div><button className="mobile-close" aria-label="Close navigation" onClick={()=>setMobileNav(false)}><X/></button></div>
    <DropdownMenu.Root><DropdownMenu.Trigger asChild><button className="workspace-switch" aria-label="Workspace menu"><div className="company-avatar">{workspace.companyName.slice(0,2).toUpperCase()}</div><div><strong>{workspace.companyName}</strong><small>{workspace.industry} workspace</small></div><ChevronsUpDown size={14}/></button></DropdownMenu.Trigger>
     <DropdownMenu.Portal><DropdownMenu.Content className="ds-menu" sideOffset={4} align="start" collisionPadding={8}>
      <DropdownMenu.Label className="ds-menu-label">{workspace.companyName} · {workspace.architecture}</DropdownMenu.Label>
@@ -54,8 +55,8 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
     {navItem("history",<History/>,"AI change history")}
    </nav>
    <div className="sidebar-bottom">
-    <button onClick={()=>openAssistant("operator")}><Bot/><span>AI Operator</span></button>
-    <Hint label={permissions.editStructure?"Change modules, fields and workflows":"Admin only"} side="right"><button onClick={()=>openAssistant("builder")} className={!permissions.editStructure?"disabled":""} aria-disabled={!permissions.editStructure}><WandSparkles/><span>AI Builder</span><kbd>⌘K</kbd></button></Hint>
+    <button onClick={()=>openAssistant("operator")}><Search/><span>NODUS AI · Operator</span></button>
+    <Hint label={permissions.editStructure?"Change modules, fields and workflows":"Admin only"} side="right"><button onClick={()=>openAssistant("builder")} className={!permissions.editStructure?"disabled":""} aria-disabled={!permissions.editStructure}><GitBranch/><span>NODUS AI · Builder</span><kbd>⌘K</kbd></button></Hint>
     <button className="reset-demo" onClick={()=>setConfirmReset(true)}><RotateCcw/><span>Reset demo</span></button>
     <div className="user"><div className="avatar">{currentUser.initials}</div><div><strong>{currentUser.name}</strong><small>{role.name}</small></div>
      <DropdownMenu.Root><DropdownMenu.Trigger asChild><button aria-label="Account menu"><MoreHorizontal size={16}/></button></DropdownMenu.Trigger>
@@ -80,7 +81,7 @@ export function WorkspaceApp({workspace,setWorkspace,onReset}:{workspace:Workspa
        <div className="notif-head"><strong>Needs attention</strong><span>{workspace.alerts.length}</span></div>
        {workspace.alerts.length===0?<p className="notif-empty">You’re all caught up.</p>:workspace.alerts.slice(0,6).map(a=><Popover.Close asChild key={a.id}><button className="notif-row" onClick={()=>a.entityId&&go(a.entityId)}><span className={`sev ${a.severity}`}><AlertCircle size={14}/></span><span><strong>{a.title}</strong><small>{a.detail}</small></span></button></Popover.Close>)}
       </Popover.Content></Popover.Portal></Popover.Root>
-     <Hint label="Ask your workspace" shortcut="⌘K"><button className="assistant-top" onClick={()=>openAssistant("operator")}><Sparkles/>Ask AI</button></Hint>
+     <Hint label="Ask your workspace" shortcut="⌘K"><button className="assistant-top" onClick={()=>openAssistant("operator")}><NodusLogo variant="mark"/>NODUS AI</button></Hint>
      <div className="avatar" title={currentUser.name}>{currentUser.initials}</div>
     </div>
    </header>
