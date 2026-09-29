@@ -226,6 +226,9 @@ tbody tr:hover { background: #F8F0E8 !important; }
 .empty-state { padding: var(--ui-space-8) var(--ui-space-6); }
 .empty-state>svg { color: var(--muted); }
 .empty-state p { line-height: 1.5; }
+.loading-view .steps>div { min-height: 44px; padding-block: var(--ui-space-2); transition: color var(--ui-transition-fast); }
+.loading-view .steps>div + div { border-top: 1px solid var(--line-soft); }
+.loading-view .steps .current span { box-shadow: none; }
 
 /* Overlay hierarchy remains Radix-driven for Escape and focus management. */
 .ds-menu, .popover { z-index: var(--ui-z-popover); border: 1px solid var(--line); box-shadow: var(--shadow-menu); backdrop-filter: none; }
