@@ -2,3 +2,4 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+/.legacy-git-backup-2026-09-29-144dec0/
