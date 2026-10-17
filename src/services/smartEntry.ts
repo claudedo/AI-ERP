@@ -156,6 +156,13 @@ export function proposeEntry(
       if (price && value !== null) record[price.id] = value * (/^mila$/i.test(amount[2] || "") ? 1000 : /^milion/i.test(amount[2] || "") ? 1000000 : 1);
       else proposal.questions.push("In quale campo prezzo vuoi inserire l’importo indicato?");
     }
+    const location = request.match(/\b((?:via|viale|piazza|corso|vicolo|strada)\s+[^;\n]+?\s+\d+[A-Za-z]?(?:[/-]\d+)?)(?:\s+(?:a|in)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ -]*?))?(?=\s+(?:da|a|per)\s+\d|[;,\n.]|$)/i);
+    if (location) {
+      const address = entity.fields.filter(f => f.type === "text" && /address|indirizz|street/i.test(f.id + f.name));
+      const city = entity.fields.filter(f => f.type === "text" && /city|citt[aà]/i.test(f.id + f.name));
+      if (address.length === 1) record[address[0].id] = location[1].trim();
+      if (city.length === 1 && location[2]) record[city[0].id] = location[2].trim();
+    }
     for (const field of entity.fields.filter(f => !f.formula)) {
       const escaped = [field.name, field.id].map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
       if (field.id === "reference") escaped.push("riferimento", "codice");

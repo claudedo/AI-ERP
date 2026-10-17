@@ -8,10 +8,12 @@ import { localConfigurationProvider } from "./configurationProvider";
 import { applyProposal, createProposal, interpretCommand } from "../services/aiEngine";
 import { proposalSchema, type ConfigurationOperation } from "../services/configuration";
 import { newId } from "../services/workspaceDomain";
+import { localExamples, localQuery } from "./localQueries";
 
 export async function localChat(message: string, workspace: Workspace, contextId?: string): Promise<ChatResponse> {
   const payment = paymentGuard(message, workspace); if (payment) return payment;
   const intent = chatIntent(message), role = currentRole(workspace);
+  if (intent === "question") { const query = localQuery(message, workspace, contextId); if (query) return query; }
   if (intent === "structure") {
     if (role.id !== "admin" || !role.permissions.editStructure) return { type: "unsupported", source: "local", message: "Solo un Admin può proporre modifiche alla struttura." };
     try { return { type: "structure_proposal", source: "local", message: "Ho preparato una bozza strutturale. Non è ancora applicata.", proposal: await localConfigurationProvider.propose(message, workspace) }; }
@@ -50,5 +52,5 @@ export async function localChat(message: string, workspace: Workspace, contextId
   if (/ritard|delayed/i.test(message) && orders) return { type: "query_results", source: "local", message: "Ordini in ritardo", query: { entityId: orders.id, filters: [{ fieldId: "status", operator: "contains", value: "Delayed" }], metric: "count", fieldId: null, groupBy: null } };
   if (/attivit|tasks/i.test(message) && tasks) return { type: "query_results", source: "local", message: "Attività disponibili", query: { entityId: tasks.id, filters: [], metric: "count", fieldId: null, groupBy: null } };
   if (/attenzion|attention/i.test(message)) return { type: "answer", source: "local", message: workspace.alerts.length ? `${workspace.alerts.length} segnalazioni: ${workspace.alerts.slice(0, 4).map(a => a.title).join("; ")}` : "Non risultano segnalazioni urgenti nel workspace." };
-  return { type: "unsupported", source: "local", message: "La modalità locale comprende solo alcune richieste. Puoi riprovare tra poco con NODUS AI oppure specificare un inserimento con campi e valori espliciti." };
+  return { type: "unsupported", source: "local", message: `La modalità locale comprende solo alcune richieste basate sul tuo schema. Puoi provare: ${localExamples(workspace).map(example => `«${example}»`).join("; ")}.` };
 }
