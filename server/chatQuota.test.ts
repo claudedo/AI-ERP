@@ -43,7 +43,13 @@ describe("shared provider-call budget", () => {
   });
   it("permits an explicit local development opt-in but never a production bypass", async () => {
     vi.stubEnv("DATABASE_URL", ""); vi.stubEnv("NODUS_AI_ALLOW_UNMETERED", "true"); vi.stubEnv("NETLIFY", ""); vi.stubEnv("CONTEXT", "");
+    vi.stubEnv("NODE_ENV", "development");
     expect(await reserveChatQuota("client")).not.toBeNull();
     vi.stubEnv("CONTEXT", "production"); expect(await reserveChatQuota("client")).toBeNull();
+  });
+  it("does not treat missing runtime markers as permission for unmetered calls", async () => {
+    for (const name of ["DATABASE_URL", "NODE_ENV", "NETLIFY", "CONTEXT"]) vi.stubEnv(name, "");
+    vi.stubEnv("NODUS_AI_ALLOW_UNMETERED", "true");
+    expect(await reserveChatQuota("client")).toBeNull();
   });
 });

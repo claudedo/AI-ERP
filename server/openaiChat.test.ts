@@ -173,6 +173,14 @@ describe("minimum context, metrics and fallback", () => {
     await openaiChat(body, selectChatContext(w, message), w, fetcher); expect(timeout).toHaveBeenLastCalledWith(8000);
     vi.stubEnv("OPENAI_TIMEOUT_MS", "1200"); await openaiChat(body, selectChatContext(w, message), w, fetcher); expect(timeout).toHaveBeenLastCalledWith(1200);
   });
+  it("includes the structural schema and larger budget only for explicit structure requests", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-only");
+    const w = fixture(), message = "Crea un modulo Qualità con nome e data";
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(envelope()) }] }] })));
+    await openaiChat({ message, mode: "demo", requestId: crypto.randomUUID(), history: [] }, selectChatContext(w, message), w, fetcher);
+    const options = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(options.instructions).toContain('"createEntity"'); expect(options.max_output_tokens).toBe(3000);
+  });
   it("rejects cross-origin requests and repeated IDs; limits warm-instance rate", async () => {
     const response = await handler(new Request("https://nodus.test/.netlify/functions/nodus-ai", { method: "POST", headers: { Origin: "https://other.test" } })); expect(response.status).toBe(403);
     const limiter = new ChatRateLimit(); expect(limiter.accept("ip", "same", 0)).toBe(true); expect(limiter.accept("ip", "same", 1)).toBe(false);

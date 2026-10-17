@@ -10,7 +10,7 @@ class QuotaExceeded extends Error {}
 export interface ChatReservation { refund(): Promise<void> }
 
 function localUnmetered(): boolean {
-  return process.env.NODUS_AI_ALLOW_UNMETERED === "true" && process.env.NODE_ENV !== "production" && !["production", "deploy-preview", "branch-deploy"].includes(process.env.CONTEXT || "") && (!process.env.NETLIFY || process.env.NETLIFY_DEV === "true");
+  return process.env.NODUS_AI_ALLOW_UNMETERED === "true" && (process.env.NODE_ENV === "development" || process.env.NETLIFY_DEV === "true") && process.env.NODE_ENV !== "production" && !["production", "deploy-preview", "branch-deploy"].includes(process.env.CONTEXT || "") && (!process.env.NETLIFY || process.env.NETLIFY_DEV === "true");
 }
 
 /** Reserve provider calls atomically across Function instances; never store raw IPs. */

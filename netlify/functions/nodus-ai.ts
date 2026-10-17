@@ -13,7 +13,7 @@ const limiter = new ChatRateLimit();
 export const config = { rateLimit: { windowLimit: 10, windowSize: 60, aggregateBy: ["ip", "domain"] } };
 const unavailable = { error: "NODUS AI non è temporaneamente disponibile. Puoi riprovare o usare la modalità locale." };
 export default async function handler(request: Request, netlify: { ip?: string } = {}): Promise<Response> {
-  if (request.method === "GET") return respond({ service: "NODUS AI", configured: !!process.env.OPENAI_API_KEY });
+  if (request.method === "GET") return respond({ service: "NODUS AI", configured: !!process.env.OPENAI_API_KEY, sharedQuotaConfigured: !!process.env.DATABASE_URL });
   if (request.method !== "POST") return respond(unavailable, 405);
   // Browser same-origin only; no permissive CORS. This is not a substitute for authentication.
   const origin = request.headers.get("origin"), expected = new URL(request.url).origin;

@@ -43,6 +43,6 @@ Il controllo deterministico riconosce €300.000, Modena e pagamento ricevuto, c
 ## Verifica reale
 
 - `npm test`, `npm run build`, `node scripts/unified-chat-qa.mjs` (Chrome isolato; reinizializza solo quel localStorage).
-- `GET /.netlify/functions/nodus-ai`: stato pubblico di configurazione, **mai** valore della chiave. `configured: true` non certifica che account/quota/model siano utilizzabili.
-- `GET /build-info.json`: commit della build effettivamente pubblicata. Verificare che coincida con il commit pushato, poi provare POST con dati sintetici e controllare `source: openai`.
+- `GET /.netlify/functions/nodus-ai`: stato pubblico di configurazione, **mai** valore della chiave. `configured` indica la presenza della chiave e `sharedQuotaConfigured` la presenza della configurazione del database; nessuno dei due certifica la disponibilità del servizio o l’applicazione della migrazione.
+- `GET /build-info.json`: commit della build effettivamente pubblicata. Verificare che coincida con il commit pushato, poi provare POST con dati sintetici. Senza quota condivisa la risposta attesa è `source: local`; con quota, chiave e provider funzionanti è `source: openai`. I pagamenti già gestiti dal guard deterministico non richiedono il modello e restano `source: local`.
 - Il push non certifica il deploy. Solo la verifica della build pubblicata e della Function consente di dichiararlo riuscito; il test sintetico non certifica tutti i flussi di un'organizzazione autenticata.

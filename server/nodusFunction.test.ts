@@ -9,6 +9,11 @@ export function demoRequest(message = "Come funziona?") {
   return new Request("https://nodus.test/.netlify/functions/nodus-ai", { method: "POST", headers: { Origin: "https://nodus.test", "Content-Type": "application/json" }, body: JSON.stringify({ message, mode: "demo", requestId: crypto.randomUUID(), history: [], context: selectChatContext(workspace, message) }) });
 }
 describe("anonymous provider-call boundary", () => {
+  it("reports configuration booleans, never secret values", async () => {
+    vi.stubEnv("DATABASE_URL", ""); vi.stubEnv("OPENAI_API_KEY", "server-test-only");
+    const response = await handler(new Request("https://nodus.test/.netlify/functions/nodus-ai")), data = await response.json();
+    expect(data).toMatchObject({ configured: true, sharedQuotaConfigured: false }); expect(JSON.stringify(data)).not.toContain("server-test-only");
+  });
   it("accepts a repeated message with a fresh request ID", async () => {
     vi.stubEnv("DATABASE_URL", ""); vi.stubEnv("OPENAI_API_KEY", "");
     const ip = crypto.randomUUID();
