@@ -34,6 +34,10 @@ Le chiamate a pagamento sono **bloccate per default senza quota condivisa**: dat
 
 ## Prova pagamento Modena
 
+### Migrazione delle etichette immobiliari
+
+`realEstateLabels.ts` cambia soltanto i `name` predefiniti richiesti: Properties → Immobili, Owners → Proprietari, Leads → Potenziali clienti, Reference → Riferimento, Address → Indirizzo, Asking price → Prezzo richiesto. ID, dati dei record, opzioni di stato, versione, chiave localStorage e nomi personalizzati restano invariati. Si applica ai workspace generati e, al caricamento, a quelli esistenti, comprese bozze e configurazioni storiche per evitare che una pubblicazione ripristini l’inglese. Prima di riscrivere un workspace locale viene conservato il JSON originale come backup. In modalità connessa la localizzazione è applicata in lettura e viene persistita nella successiva modifica autorizzata. Non richiede una nuova migrazione SQL.
+
 Il controllo deterministico riconosce €300.000, Modena e pagamento ricevuto, cerca riferimenti compatibili nello schema e non inventa date o collegamenti. Una sola corrispondenza produce una proposta; più immobili chiedono una scelta tramite ID; nessun riferimento o modulo Pagamenti assente richiede chiarimenti. Non crea un nuovo modulo autonomamente. I dati demo originari non sono stati cambiati: il fixture di test aggiunge immobili/pagamenti soltanto nei test. Nessuna scrittura avviene prima della conferma.
 
 ## Verifica reale

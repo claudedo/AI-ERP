@@ -7,6 +7,7 @@ import type {
   Entity,
   Workspace,
 } from "../types";
+import { localizeRealEstateNames } from "./realEstateLabels";
 import {
   cloneEntities,
   demoWorkflows,
@@ -140,7 +141,7 @@ export function generateWorkspace(
   let entities =
     option.id === "advanced" ? all : all.filter((e) => wanted.has(e.name));
   if (!entities.length) entities = all.slice(0, 4);
-  return {
+  return localizeRealEstateNames({
     id: `workspace-${crypto.randomUUID()}`,
     companyName: a.companyName,
     industry: a.industry,
@@ -169,7 +170,7 @@ export function generateWorkspace(
       { id: "due", kind: "due" },
       { id: "approvals", kind: "approvals" },
     ],
-  };
+  });
 }
 
 export function interpretCommand(

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { roles } from "../src/data/templates";
 import type { RoleId, Workspace } from "../src/types";
 import { upgradeCompanies } from "../src/services/companies";
+import { localizeRealEstateNames } from "../src/services/realEstateLabels";
 
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function required(name: string): string { const value = process.env[name]; if (!value) throw new HttpError(503, `Server configuration missing: ${name}`); return value; }
@@ -29,6 +30,6 @@ export async function authenticate(request: Request): Promise<Principal> {
 }
 export async function withMembers(workspace: Workspace, principal: Principal, sql: TransactionSql | ReturnType<typeof postgres> = database()): Promise<Workspace> {
   const rows = await sql`SELECT user_id, display_name, role_id FROM memberships WHERE organization_id=${principal.organizationId}::uuid`;
-  return upgradeCompanies({ ...workspace, currentUserId: principal.userId, roles: workspace.roles?.length ? workspace.roles : structuredClone(roles), users: rows.map(row => ({ id: row.user_id, name: row.display_name, initials: row.display_name.slice(0,2).toUpperCase(), email: "", roleId: row.role_id, title: "Organization member" })) });
+  return localizeRealEstateNames(upgradeCompanies({ ...workspace, currentUserId: principal.userId, roles: workspace.roles?.length ? workspace.roles : structuredClone(roles), users: rows.map(row => ({ id: row.user_id, name: row.display_name, initials: row.display_name.slice(0,2).toUpperCase(), email: "", roleId: row.role_id, title: "Organization member" })) }));
 }
 export const respond = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });

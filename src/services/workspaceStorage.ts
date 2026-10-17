@@ -4,6 +4,7 @@ import { deriveAlerts } from "./aiEngine";
 import { newId } from "./workspaceDomain";
 import { upgradeCompanies } from "./companies";
 import { assertStoredWorkspace } from "./workspaceSchema";
+import { localizeRealEstateNames } from "./realEstateLabels";
 
 export interface WorkspaceRepository { load(): Workspace | null; save(workspace: Workspace, expectedRaw?: string | null): void; clear(): void; raw(): string | null; backupKeys(): string[] }
 export const WORKSPACE_KEY = "ai-business-os-workspace";
@@ -52,12 +53,16 @@ export const localWorkspaceRepository: WorkspaceRepository = {
       const backupKey = `${WORKSPACE_KEY}-backup-v${sourceVersion}-${Date.now()}`;
       try { localStorage.setItem(backupKey, original); } catch { throw new Error("Not enough browser storage to preserve a migration backup. No data was changed."); }
     }
-    const migrated = migrate(parsed);
-    if (sourceVersion < SCHEMA_VERSION) {
-      try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(migrated)); }
+    const migrated = migrate(parsed), localized = localizeRealEstateNames(migrated);
+    if (localized !== migrated && sourceVersion >= SCHEMA_VERSION) {
+      const backupKey = `${WORKSPACE_KEY}-backup-v${sourceVersion}-labels-${Date.now()}`;
+      try { localStorage.setItem(backupKey, original); } catch { throw new Error("Spazio insufficiente per il backup delle etichette. Nessun dato modificato."); }
+    }
+    if (sourceVersion < SCHEMA_VERSION || localized !== migrated) {
+      try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(localized)); }
       catch { throw new Error("Migration backup was kept, but the updated workspace could not be saved."); }
     }
-    return migrated;
+    return localized;
   },
   save(w, expectedRaw) {
     // Reject stale snapshots before writing; the caller keeps its unsaved draft.
