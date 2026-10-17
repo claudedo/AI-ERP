@@ -8,7 +8,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
       <div className="hero-identity"><NodusLogo variant="lockup"/><span>THE INTELLIGENT OPERATING SYSTEM</span></div>
       <div className="eyebrow">STRUCTURE FOR WHAT MOVES YOU</div>
       <h1>Your business, precisely connected.</h1>
-      <p>Describe how your company works. NODUS uses AI to design a management system around your processes, people and data.</p>
+      <p>Describe how your company works and explore a management system shaped around your processes.</p>
+      <p className="demo-disclosure">Demo locale: i dati restano in questo browser. NODUS Architect usa regole locali dichiarate, senza un modello AI esterno o un workspace condiviso già attivo.</p>
       <button className="primary large" onClick={onStart}>Design your workspace <ArrowRight size={18}/></button>
       <div className="concept-flow" aria-label="Business to custom software process">
         <div><span>01 / DISCOVER</span><strong>Your business</strong><small>People, data and processes</small></div><i>→</i>

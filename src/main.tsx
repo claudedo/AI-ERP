@@ -6,6 +6,7 @@ import "./styles.css";
 import "./design-system.css";
 import "./nodus-tokens.css";
 import "./nodus.css";
+import "./builder/builder.css";
 
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{hasError:boolean}>{
   state={hasError:false};

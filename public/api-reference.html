@@ -1,0 +1,7 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NODUS API reference</title><style>body{font:16px/1.6 -apple-system,BlinkMacSystemFont,Arial,sans-serif;color:#32101A;background:#F4EBDD;max-width:850px;margin:40px auto;padding:24px}code,pre{background:#E8DACA;padding:4px;border-radius:6px}pre{white-space:pre-wrap;padding:16px}h1{font-family:Didot,serif;letter-spacing:.12em}</style><h1>NODUS</h1><h2>Connected API</h2><p>Endpoint: <code>/.netlify/functions/api</code>. Requires a verified Supabase Bearer token and organization membership.</p><p>GET returns workspace, attachments and events. POST accepts validated commands with revision checking:</p><pre>{
+  "action": "mutate",
+  "expectedRevision": 4,
+  "requestId": "a-new-uuid-per-intent",
+  "command": { "type": "saveRecord", "entityId": "module-id",
+    "record": { "id": "record-id", "code": "S001" } }
+}</pre><p>Commands: configure, stageProposal, publish, discardDraft, restoreVersion, saveRecord, deleteRecord, comment, approval. Unknown operations and identity/tenant overrides are rejected. 409 means refresh and review before retrying.</p><p>Private files: attachmentInit → PUT signed URL → attachmentComplete; attachmentUrl authorizes a short-lived download and attachmentDelete removes the object.</p><p>Full setup and live verification checklist: <code>docs/BACKEND.md</code> in the repository. External services require configuration. Outbound webhooks are not enabled.</p></html>

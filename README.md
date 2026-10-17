@@ -1,82 +1,76 @@
 # NODUS
 
-NODUS is a functional B2B SaaS prototype that connects a company's processes into a configurable, AI-designed management workspace. The demo works without an AI key: its business analysis and workspace changes use a deterministic rules engine designed to be replaceable by real API calls.
+## Percorso cliente, anagrafiche e Smart Entry
 
-## Visual identity
+La landing identifica la demo locale e il motore a regole prima dell’avvio. L’onboarding riconosce consulenza, moda, immobiliare e arredamento anche in italiano; per descrizioni ambigue richiede un settore esplicito. Descrizione, architettura, raccomandazioni e fase sono conservate in `nodus-onboarding-v1`; “Ricomincia e cancella bozza” avvia una nuova bozza. Formati incompatibili vengono ignorati senza cancellare il workspace. I passaggi di caricamento interrotti ripartono da un passaggio modificabile.
 
-NODUS pairs a custom four-connection node symbol with an uppercase editorial wordmark. Its design tokens live in `src/nodus-tokens.css`: bordeaux, cream, sand and warm-white surfaces, restrained borders and shadows, moderate radii, and accessible interaction states. Didot (with system serif fallbacks) is reserved for the wordmark and editorial headlines; functional UI uses a system sans stack. The original SVG variants live in `public/nodus-mark.svg`, `public/nodus-wordmark.svg` and `public/nodus-lockup.svg`.
+La migrazione dati 4 → 5 riunisce Clienti/Customers/Fornitori nell’unica base **Aziende**, con viste Clienti e Fornitori (tipo **Entrambi** visibile in entrambe). Conserva gli ID quando possibile, rimappa relazioni, commenti e allegati e mantiene i dati originali in `legacyDetails`; il JSON precedente è salvato come backup prima della migrazione locale. Aziende con stesso nome normalizzato o stessa partita IVA vengono consolidate, conservando anche i valori originali. Una bozza strutturale precedente è conservata in `companyMigrationDraft` per recupero manuale, senza applicarla a uno schema ormai diverso. La cronologia configurazioni rimane disponibile; un ripristino incompatibile viene bloccato.
 
-## Implemented product flow
+Ogni azienda contiene ragione sociale, nome commerciale, tipo, partita IVA, codice fiscale, paese, settore, sito, note e stato. **Sedi** e **Contatti** sono moduli relazionali della stessa persistenza: più elementi per azienda, sede associata al contatto verificata, una sola sede/contatto principale per azienda. La scheda propone Panoramica, Contatti, Sedi, Operazioni, Documenti e Attività; le operazioni provengono dai collegamenti realmente presenti. La partita IVA è facoltativa (aziende estere e privati supportati), normalizzata e controllata per duplicati. Il controllo non certifica iscrizioni fiscali o validità presso registri esterni.
 
-1. Business discovery conversation with Fashion, Real Estate, Consulting, and generic examples.
-2. Keyword-based process analysis and three architecture proposals.
-3. AI suggestions followed by animated workspace generation.
-4. A generated, sector-specific operating system with configurable modules, fields, records, relations, saved views, workflows, users, roles, alerts, and AI change history.
+**Inserisci con AI** è disponibile globalmente, nei moduli e dalle richieste operative della chat. Lo stesso servizio `smartEntry.ts` legge lo schema corrente e prepara una preview modificabile. Supporta aziende con contatto e sede espliciti, ordini con quantità/prezzi, aggiornamento indirizzo e data consegna, attività/progetti e campi espliciti `Nome campo: valore`. Le date relative diventano date assolute visibili. Riferimenti ambigui richiedono selezione o chiarimento; schemi insufficienti rimandano al Builder. I valori non presenti non sono inventati. La proposta viene salvata con un unico aggiornamento della persistenza, usando validazione/permessi/relazioni e origine `ai`; idempotenza della proposta, controllo revisione, controllo duplicati e transazione impediscono conferme ripetute e salvataggi parziali. In modalità connessa il dispatcher valida lo stesso comando e accoda gli eventi nella transazione SQL.
 
-## Working capabilities
+La bozza Smart Entry (testo e preview) è conservata nel browser per workspace. Rigenerare una proposta dopo altre modifiche aggiorna il contesto; una proposta obsoleta non è applicata. L’interprete locale è deterministico e limitato: non comprende liberamente ogni email, non consulta siti, non invia messaggi e non rappresenta un LLM. Se una richiesta non è supportata, la segnala e permette correzione o passaggio al Builder. Non aggiunge automaticamente moduli business mancanti; i campi quantità/prezzo/descrizione degli ordini sono predisposti nella migrazione per rendere rappresentabili gli esempi supportati.
 
-- Sector-specific modules and demo data for Fashion/production, Real Estate, Consulting, and generic businesses.
-- Record search, status filters, configurable column visibility, saved views, add/edit drawer, delete confirmation, and linked relation labels.
-- Live dashboard KPIs, alerts, and charts calculated from workspace records.
-- AI Operator commands for data queries and filters.
-- AI Builder commands for fields, modules, relations, and workflows.
-- Structural AI changes always show a preview with scope, data impact, Confirm, and Cancel.
-- Automations with active state, triggers, actions, run history, and working demo effects.
-- Demo users and Admin, Manager, Operator, and Viewer permissions.
-- Local persistence, schema migration for older demo workspaces, reset, responsive layouts, empty states, and success feedback.
+Per un LLM futuro: implementare un provider server di Smart Entry che riceva lo schema autorizzato e restituisca `entrySchema`, con riferimenti ai soli record consentiti. Riutilizzare `applyEntry` e la conferma esplicita; mantenere credenziali esclusivamente sul server. `AI_PROVIDER_URL` attuale configura il provider strutturale del Builder: non abilita automaticamente Smart Entry generativa. Il backend reale richiede il setup in `docs/BACKEND.md` e collaudo con credenziali; non è certificato dalla demo locale.
 
-## Stack
+Configurable business workspaces with a visual Builder, an operational Workspace and controlled AI proposals. Bordeaux/cream, the original logo and uppercase Didot wordmark are preserved; functional UI uses the existing sans-serif stack and design tokens.
 
-- React 19 + TypeScript + Vite
-- Lucide React icons
-- Recharts
-- Browser `localStorage`
-- Netlify SPA configuration
+## Run and verify
 
-## Architecture
+Node 22.12 or newer:
 
-- `src/types` — domain model for Workspace, Entity, Field, Record, Relation, View, Workflow, User, Role, Alert, and AI history.
-- `src/data/templates.ts` — vertical templates and demo records.
-- `src/services/aiEngine.ts` — deterministic analysis, command interpretation, change proposals, and confirmed change application.
-- `src/services/workspaceStorage.ts` — repository boundary around local persistence and schema migration.
-- `src/hooks/useWorkspace.ts` — React persistence integration.
-- `src/components` — dashboard, entity table, record drawer, assistant, automations, and access management.
-- `src/pages` — landing, discovery/builder flow, and main application shell.
-
-## Run locally
-
-```bash
+```sh
 npm install
 npm run dev
-```
-
-Create the production bundle with:
-
-```bash
+npm test
 npm run build
 ```
 
-## Netlify deployment
+The build type-checks browser code and Netlify Functions. `npm run dev` serves the independent local demo. Use Netlify Dev for local Functions.
 
-Connect this folder as the Netlify project. `netlify.toml` is already configured with:
+## Working locally
 
-- Build command: `npm run build`
-- Publish directory: `dist`
-- SPA fallback to `index.html`
+- Sector onboarding, CSV/XLSX mapping/import, duplicate skipping, rejected-row reports, filtered/selected CSV export.
+- Record drawers, validation, confirmed deletion/link cleanup, assignments, comments/mentions and IndexedDB attachments (10 MB each).
+- Table/List/Kanban/Calendar, combined filters, sorting, columns, saved views, configurable dashboard widgets and command palette.
+- Visual Builder: create/rename/reorder/archive modules; configure typed fields, defaults, required rules, sidebar groups, form order/columns, table visibility, create/export buttons, views, workflows and role options.
+- Preview and Workspace reuse `EntityTable`/`RecordDrawer`; preview record editing is disabled. Configuration is declarative, not generated React code.
+- Draft changes are saved separately. Publication validates configuration and current records atomically. Up to 20 previous configurations can be loaded as drafts; incompatible restoration/type changes are rejected. Archiving preserves records and references.
+- Generic structured AI proposal example: `Crea un modulo Campionari con codice, collezione, stagione, stato e collegamento al fornitore`. The local parser supports module creation with named fields; other changes use the manual Builder. Ambiguous targets block application. Older quick-command AI flows remain for compatibility.
+- Safe arithmetic formulas (`[quantity] * [price]`), dependency/cycle validation, conditional field visibility and required rules. No eval or JavaScript execution.
+- Browser workflows execute on record writes, including import. They do not run when the app is closed or send email. Structural publication/AI configuration changes do not replay record events; subsequent record writes do.
 
-## Connecting production services
+## Persistence and migrations
 
-### AI API
+The original `ai-business-os-workspace` key is retained. Schema migrations 1 → 2 → 3 → 4 → 5 save the previous JSON under a timestamped backup key before migration. Version 4 adds draft/version metadata; version 5 unifies company registries and their relations as described above. Corrupt data and quota failures are surfaced without silent reset. File blobs are in IndexedDB; JSON contains metadata only.
 
-Keep the interfaces exported by `src/services/aiEngine.ts` and replace their deterministic implementations with calls to a server-side endpoint. API credentials must live in a Netlify Function or another backend, never in the Vite browser bundle. The clean integration points are `analyzeBusiness`, `generateArchitectureOptions`, `generateWorkspace`, `interpretCommand`, `createProposal`, and `applyProposal`.
+IDs survive renaming. Populated fields cannot be destructively removed or changed to incompatible types through publication: create a replacement field and explicitly migrate data. Supported relationships are many-to-one and unique one-to-one. For many-to-many, use a link module with two relation fields. Local data is single-browser, not a shared organizational backup.
 
-### Backend and database
+## Connected mode
 
-Implement the `WorkspaceRepository` interface in `src/services/workspaceStorage.ts` with an HTTP-backed repository, then inject it through `useWorkspace`. The UI and domain model do not depend directly on `localStorage`.
+“Connected workspace” opens a separate authenticated mode with an asynchronous API repository, the same Builder/record renderer, shared records/comments/approvals, invitations, private signed attachments and background event status. Server authentication uses Supabase; tenant and role come from a verified identity and database membership. Mutations validate actions, lock the workspace, check expected revision and persist idempotency receipts/audit entries.
 
-## Intentionally simulated
+PostgreSQL includes organizations, memberships, configuration versions, dynamic entities/JSONB records, relations, comments, attachment metadata, workflows, approvals, queued events and audit logs. A Netlify scheduled worker processes events with locking, bounded retries and superseded-event handling. Workflow outputs do not recursively enqueue more events.
 
-- AI reasoning and natural-language interpretation are rules-based.
-- Authentication is represented by switchable demo users, not a real identity provider.
-- Workflow execution runs in the browser and covers representative triggers rather than a background job system.
-- Demo records are local and single-device; there is no multi-user synchronization or audit-grade backend.
+See [backend setup and API contract](docs/BACKEND.md). Live database, auth, email, remote storage, scheduled execution and external AI require configuration; they are not verified without credentials. No paid infrastructure is provisioned by this code.
+
+Connected-mode limits: one aggregate workspace per organization, 5,000 records, explicit Refresh rather than realtime subscriptions, individual record writes (bulk import remains local), no outbound webhooks. Demo user switching is local-only.
+
+## Code map
+
+- `src/builder` — visual editing, shared preview, publication and version controls.
+- `src/services/configuration.ts` — runtime schemas, atomic operations and publication validation.
+- `src/services/workspaceActions.ts` — shared authorized command dispatcher.
+- `src/services/workspaceDomain.ts` — record validation, permissions, workflow effects and approvals.
+- `src/services/formulas.ts` — safe arithmetic and dependency evaluation.
+- `src/ai` — local/server structured-proposal providers.
+- `src/persistence/apiRepository.ts` — asynchronous connected repository.
+- `src/services/workspaceStorage.ts` — local repository and migration backups.
+- `server`, `netlify/functions` — tenant context, SQL migration, API and worker.
+
+## Verification and deployment
+
+Tests cover import, migration backups, relation integrity, permissions, structural atomicity, stale proposals, publication/restoration, formulas, workflow duplicate prevention and server membership boundaries. Unit membership tests do not replace live PostgreSQL/RLS integration tests: follow the checklist in `docs/BACKEND.md` before using real business data.
+
+Netlify builds with `npm run build`, serves `dist` and bundles `netlify/functions`. Check the deploy for the exact Git commit; a successful push alone does not confirm deployment.
