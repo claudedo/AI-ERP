@@ -36,7 +36,7 @@ export function validateChatResponse(input: unknown, workspace: Workspace, reque
 
 export async function requestChat(workspace: Workspace, message: string, history: { q: string; a: string }[], contextId?: string, token?: () => Promise<string>, fetcher: typeof fetch = fetch): Promise<ChatResponse> {
   try {
-    const response = await fetcher("/.netlify/functions/nodus-ai", { method: "POST", signal: AbortSignal.timeout(26000), headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${await token()}` } : {}) }, body: JSON.stringify({ requestId: crypto.randomUUID(), message, history: history.slice(-6).map(turn => ({ q: turn.q.slice(0, 1000), a: turn.a.slice(0, 1000) })), contextId, mode: token ? "connected" : "demo", ...(token ? {} : { context: selectChatContext(workspace, message, contextId) }) }) });
+    const response = await fetcher("/.netlify/functions/nodus-ai", { method: "POST", signal: AbortSignal.timeout(18000), headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${await token()}` } : {}) }, body: JSON.stringify({ requestId: crypto.randomUUID(), message, history: history.slice(-6).map(turn => ({ q: turn.q.slice(0, 1000), a: turn.a.slice(0, 1000) })), contextId, mode: token ? "connected" : "demo", ...(token ? {} : { context: selectChatContext(workspace, message, contextId) }) }) });
     if ([401, 403, 429].includes(response.status)) {
       let reason: "rate_limit" | "forbidden" = response.status === 429 ? "rate_limit" : "forbidden";
       try { const parsed = chatErrorSchema.safeParse(await response.json()); if (parsed.success) reason = parsed.data.reason; } catch { /* Netlify may return an HTML 429. */ }

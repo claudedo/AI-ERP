@@ -20,6 +20,10 @@ Per consultazioni il modello prepara filtri e metriche tipizzati. Il gestionale 
 
 ## Fallback e protezioni
 
+Timeout del provider: `OPENAI_TIMEOUT_MS`, default **8000 ms**, configurabile da 1000 a 15000 ms; valori invalidi tornano al default. Il client attende al massimo 18 secondi. Il budget di output è 1500 token per richieste ordinarie, 3000 per struttura; lo schema JSON strutturale entra nelle instructions soltanto per `chatIntent(message) === "structure"`. L’envelope strict rimane sempre attivo. Le [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) possono essere incomplete per limite di token: non si applicano risposte parziali e si usa il fallback con rimborso della prenotazione.
+
+La [documentazione Netlify attuale](https://docs.netlify.com/build/functions/configuration/) indica 60 secondi come limite sincrono predefinito e 30 per le Functions pianificate. Il piano e le eventuali condizioni legacy del sito non sono stati verificati tramite account Netlify: controllare il limite effettivo nella dashboard. Non è stato richiesto né presunto un aumento di piano. Il default prudente di 8 secondi non sostituisce il monitoraggio dei tempi di database e rimborso.
+
 Se mancano chiave/quota, il provider fallisce, rifiuta, scade o restituisce JSON non valido, la chat usa il motore locale mantenendo la stessa UI e segnala **Modalità locale temporanea**. **NODUS AI connesso** appare solo dopo una risposta OpenAI valida. Il fallback è limitato e non viene presentato come comprensione generativa completa.
 
 Limiti input/output, body massimo 160 KB, timeout, rifiuto cross-origin, nessun CORS permissivo e blocco doppio invio nel client. La configurazione esportata dalla Function aggiunge un [rate limit Netlify](https://docs.netlify.com/manage/security/secure-access-to-sites/rate-limiting/) di 10 richieste/minuto per IP e dominio, prima dell'invocazione; il contatore in memoria rimane una seconda difesa, non una quota distribuita.

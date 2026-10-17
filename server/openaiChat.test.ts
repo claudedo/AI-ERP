@@ -162,6 +162,16 @@ describe("minimum context, metrics and fallback", () => {
     expect(reply.source).toBe("openai");
     const [url, options] = fetcher.mock.calls[0], body = JSON.parse(options.body);
     expect(url).toBe("https://api.openai.com/v1/responses"); expect(body.store).toBe(false); expect(body.model).toBe(DEFAULT_OPENAI_MODEL); expect(body.tools).toBeUndefined(); expect(options.body).not.toContain("test-only-not-a-real-key"); expect(body.text.format.strict).toBe(true);
+    expect(body.max_output_tokens).toBeLessThanOrEqual(1500);
+    expect(body.instructions).not.toContain('"createEntity"');
+  });
+  it("uses an eight-second configurable provider timeout", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-only"); vi.stubEnv("OPENAI_TIMEOUT_MS", "");
+    const timeout = vi.spyOn(AbortSignal, "timeout"), w = fixture(), message = "Come funziona?";
+    const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(envelope()) }] }] })));
+    const body = { message, mode: "demo" as const, requestId: crypto.randomUUID(), history: [] };
+    await openaiChat(body, selectChatContext(w, message), w, fetcher); expect(timeout).toHaveBeenLastCalledWith(8000);
+    vi.stubEnv("OPENAI_TIMEOUT_MS", "1200"); await openaiChat(body, selectChatContext(w, message), w, fetcher); expect(timeout).toHaveBeenLastCalledWith(1200);
   });
   it("rejects cross-origin requests and repeated IDs; limits warm-instance rate", async () => {
     const response = await handler(new Request("https://nodus.test/.netlify/functions/nodus-ai", { method: "POST", headers: { Origin: "https://other.test" } })); expect(response.status).toBe(403);
