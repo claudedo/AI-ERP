@@ -220,7 +220,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       {workspace && (
         <>
           <button className="secondary" onClick={()=>setEntry(true)}>NODUS AI</button>
-          {entry&&<AssistantPanel workspace={workspace} contextId={entity?.id} setWorkspace={()=>false} canBuild={false} setActiveEntity={setActive} setDelayedOnly={()=>{}} onOpenResult={(entityId,id)=>{setActive(entityId);setRecordId(id);setEntry(false)}} onToast={setNotice} onClose={()=>setEntry(false)} onApplyEntry={proposal=>execute({type:"smartEntry",proposal})}/>}
+          {entry&&<AssistantPanel workspace={workspace} contextId={entity?.id} setWorkspace={()=>false} canBuild={!!role?.permissions.editStructure} token={token} onApplyStructure={async proposal=>{if(!(await execute({type:"stageProposal",proposal})))return false;return execute({type:"publish"})}} setActiveEntity={setActive} setDelayedOnly={()=>{}} onOpenResult={(entityId,id)=>{setActive(entityId);setRecordId(id);setEntry(false)}} onToast={setNotice} onClose={()=>setEntry(false)} onApplyEntry={proposal=>execute({type:"smartEntry",proposal})}/>}
           <nav>
             {workspace.entities
               .filter((item) => !item.archived)

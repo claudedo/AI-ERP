@@ -213,7 +213,7 @@ export function SmartEntry({
               {proposal && (
                 <>
                   <p role="status">
-                    Preview modificabile · {proposal.operations.length}{" "}
+                    Anteprima modificabile · {proposal.operations.length}{" "}
                     operazioni · revisione {proposal.baseRevision}
                   </p>
                   {proposal.questions.map((q) => (
@@ -241,6 +241,7 @@ export function SmartEntry({
                         <legend>
                           {op.kind === "create" ? "Crea" : "Aggiorna"} ·{" "}
                           {entity?.name}
+                          {op.kind === "update" ? ` · ${op.record.id}` : ""}
                         </legend>
                         {entity?.fields
                           .filter((f) => f.id !== "legacyDetails" && !f.formula)
@@ -273,6 +274,7 @@ export function SmartEntry({
                                       value={String(r.id)}
                                     >
                                       {String(r.name || r.orderNo || r.id)}
+                                      {` · ${r.id}`}
                                       {proposal.operations.some(
                                         (o) => o.record.id === r.id,
                                       )
@@ -378,7 +380,7 @@ export function SmartEntry({
                 }
                 onClick={() => void confirm()}
               >
-                {busy ? "Salvataggio…" : "Conferma e salva"}
+                {busy ? "Salvataggio…" : embedded ? "Conferma" : "Conferma e salva"}
               </button>
             </footer>
           </>;
