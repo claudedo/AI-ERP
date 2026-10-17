@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   BookmarkPlus,
   CalendarDays,
@@ -33,6 +33,8 @@ import { RecordDrawer, recordLabel } from "./RecordDrawer";
 import { queryRecords } from "../services/viewQuery";
 import { downloadText, exportCsv } from "../services/importExport";
 import { AlternateViews } from "./AlternateViews";
+import { RecordCell } from "./RecordCell";
+import { usePagination } from "../hooks/usePagination";
 
 export function EntityTable({
   entity,
@@ -95,9 +97,15 @@ export function EntityTable({
         ? ["legacyDetails"]
         : [],
   );
-  const columns = entity.fields
-    .filter((f) => !hiddenColumns.includes(f.id))
-    .map((f) => f.id);
+  const visibleFields = useMemo(() => {
+    const order = new Map((entity.ui?.columns || entity.fields.map(f => f.id)).map((id, index) => [id, index]));
+    return entity.fields.filter(f => !hiddenColumns.includes(f.id)).sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity));
+  }, [entity.fields, entity.ui, hiddenColumns]);
+  const columns = visibleFields.map(f => f.id);
+  const relationLabels = useMemo(() => {
+    const targets = new Set(entity.fields.filter(f => f.type === "relation").map(f => f.relationEntityId));
+    return new Map(workspace.entities.filter(e => targets.has(e.id)).map(e => [e.id, new Map(e.records.map(r => [r.id, recordLabel(e, r)]))]));
+  }, [entity.fields, workspace.entities]);
   const [drawer, setDrawer] = useState<DataRecord | null | undefined>(() =>
     entity.records.find((r) => r.id === initialRecordId),
   );
@@ -118,15 +126,15 @@ export function EntityTable({
     dateField = entity.fields.find((f) => f.type === "date");
   const statuses = [
     ...new Set(
-      entity.records.map((r) => String(r.status || "")).filter(Boolean),
+      entity.records.map((r) => String(statusField ? r[statusField.id] || "" : "")).filter(Boolean),
     ),
   ];
   const combinedFilters = useMemo(
     () => [
-      ...(statusFilter
+      ...(statusFilter && statusField
         ? [
             {
-              fieldId: "status",
+              fieldId: statusField.id,
               operator: "equals" as const,
               value: statusFilter,
             },
@@ -134,12 +142,14 @@ export function EntityTable({
         : []),
       ...extraFilters,
     ],
-    [statusFilter, extraFilters],
+    [statusFilter, statusField, extraFilters],
   );
+  const deferredSearch = useDeferredValue(search);
   const rows = useMemo(
-    () => queryRecords(entity, search, combinedFilters, sort, delayedOnly),
-    [entity, search, combinedFilters, sort, delayedOnly],
+    () => queryRecords(entity, deferredSearch, combinedFilters, sort, delayedOnly),
+    [entity, deferredSearch, combinedFilters, sort, delayedOnly],
   );
+  const pagination = usePagination(rows, JSON.stringify([entity.id, deferredSearch, combinedFilters, sort, delayedOnly]));
   useEffect(
     () =>
       setSelected(
@@ -155,9 +165,9 @@ export function EntityTable({
       entity.fields.filter((f) => !v.columns.includes(f.id)).map((f) => f.id),
     );
     setStatusFilter(
-      String(v.filters.find((f) => f.fieldId === "status")?.value || ""),
+      String(v.filters.find((f) => f.fieldId === statusField?.id)?.value || ""),
     );
-    setExtraFilters(v.filters.filter((f) => f.fieldId !== "status"));
+    setExtraFilters(v.filters.filter((f) => f.fieldId !== statusField?.id));
     setLayout(v.layout || "table");
     setSort(v.sort);
   };
@@ -603,18 +613,11 @@ export function EntityTable({
               </span>
             )}
           </div>
-          <div className={`table-scroll ${layout !== "table" ? "hidden" : ""}`}>
+          <div className={`table-scroll ${layout !== "table" ? "hidden" : ""}`} aria-busy={search !== deferredSearch}>
             <table>
               <thead>
                 <tr>
-                  {entity.fields
-                    .filter((f) => columns.includes(f.id))
-                    .sort(
-                      (a, b) =>
-                        (entity.ui?.columns.indexOf(a.id) ?? 0) -
-                        (entity.ui?.columns.indexOf(b.id) ?? 0),
-                    )
-                    .map((f) => (
+                  {visibleFields.map((f) => (
                       <th scope="col" key={f.id}>
                         {f.name}
                       </th>
@@ -623,7 +626,7 @@ export function EntityTable({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {pagination.pageRows.map((r) => (
                   <tr
                     key={r.id}
                     tabIndex={0}
@@ -639,21 +642,9 @@ export function EntityTable({
                       }
                     }}
                   >
-                    {entity.fields
-                      .filter((f) => columns.includes(f.id))
-                      .sort(
-                        (a, b) =>
-                          (entity.ui?.columns.indexOf(a.id) ?? 0) -
-                          (entity.ui?.columns.indexOf(b.id) ?? 0),
-                      )
-                      .map((f) => (
+                    {visibleFields.map((f) => (
                         <td key={f.id}>
-                          {formatCell(
-                            r[f.id],
-                            f.type,
-                            f.relationEntityId,
-                            workspace,
-                          )}
+                          <RecordCell value={r[f.id]} field={f} relations={relationLabels} />
                         </td>
                       ))}
                     <td
@@ -691,15 +682,15 @@ export function EntityTable({
                                 ? "Remove selection"
                                 : "Select for export"}
                             </DropdownMenu.Item>
-                            {r.status != null && r.status !== "" && (
+                            {statusField && r[statusField.id] != null && r[statusField.id] !== "" && (
                               <DropdownMenu.Item
                                 className="ds-menu-item"
                                 onSelect={() =>
-                                  setStatusFilter(String(r.status))
+                                  setStatusFilter(String(r[statusField.id]))
                                 }
                               >
                                 <ListFilter />
-                                Show only “{String(r.status)}”
+                                Show only “{String(r[statusField.id])}”
                               </DropdownMenu.Item>
                             )}
                           </DropdownMenu.Content>
@@ -744,6 +735,7 @@ export function EntityTable({
             <span>
               Showing {rows.length} of {entity.records.length} records
             </span>
+            {layout === "table" && pagination.pages > 1 && <nav className="table-pagination" aria-label="Record pages"><button className="secondary" disabled={pagination.page === 0} onClick={() => pagination.setPage(pagination.page - 1)} aria-label="Previous page">←</button><span role="status" aria-live="polite">{pagination.start}–{pagination.end} · {pagination.page + 1}/{pagination.pages}</span><button className="secondary" disabled={pagination.page + 1 === pagination.pages} onClick={() => pagination.setPage(pagination.page + 1)} aria-label="Next page">→</button></nav>}
             <span>
               {
                 workspace.relations.filter((r) => r.fromEntityId === entity.id)
@@ -755,6 +747,7 @@ export function EntityTable({
         </div>
         {drawer !== undefined && (
           <RecordDrawer
+            key={drawer?.id || "new-record"}
             entity={entity}
             workspace={workspace}
             record={drawer}
@@ -782,54 +775,4 @@ export function EntityTable({
       </div>
     </Tooltip.Provider>
   );
-}
-function formatCell(
-  value: unknown,
-  type: string,
-  relationId: string | undefined,
-  w: Workspace,
-) {
-  if (type === "currency")
-    return (
-      <strong>
-        {new Intl.NumberFormat("en-IE", {
-          style: "currency",
-          currency: "EUR",
-          maximumFractionDigits: 0,
-        }).format(Number(value))}
-      </strong>
-    );
-  if (type === "status" || type === "select")
-    return (
-      <span
-        className={`status-pill ${String(value).toLowerCase().replace(/\s/g, "-")}`}
-      >
-        {String(value || "—")}
-      </span>
-    );
-  if (type === "date" && value)
-    return new Date(String(value)).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  if (type === "checkbox")
-    return (
-      <span className={value ? "boolean yes" : "boolean"}>
-        {value ? "Yes" : "No"}
-      </span>
-    );
-  if (type === "relation" && relationId) {
-    const target = w.entities.find((e) => e.id === relationId),
-      record = target?.records.find((r) => r.id === value);
-    return value == null || value === "" ? (
-      <span className="relation-cell">—</span>
-    ) : record && target ? (
-      <span className="relation-cell">↗ {recordLabel(target, record)}</span>
-    ) : (
-      <span className="relation-missing">Missing record</span>
-    );
-  }
-  return String(value ?? "—");
 }

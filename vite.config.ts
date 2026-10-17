@@ -13,10 +13,12 @@ export default defineConfig({
       output: {
         // Keep vendor code in cacheable chunks separate from app code.
         codeSplitting: {
+          // React wins over transitive vendor captures; keep dependencies together
+          // to avoid circular initialization between Radix's sidecar and tslib.
           groups: [
-            { name: "charts", test: /node_modules[\\/](recharts|d3-|victory-vendor|@reduxjs|redux|immer|es-toolkit|decimal\.js)/ },
-            { name: "ui", test: /node_modules[\\/](@radix-ui|radix-ui|@floating-ui|react-remove-scroll|aria-hidden)/ },
-            { name: "react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: "charts", priority: 10, test: /node_modules[\\/](recharts|d3-|victory-vendor|@reduxjs|redux|immer|es-toolkit|decimal\.js)/ },
+            { name: "ui", priority: 20, test: /node_modules[\\/](@radix-ui|radix-ui|@floating-ui|react-remove-scroll|aria-hidden)/ },
+            { name: "react", priority: 30, test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
           ],
         },
       },

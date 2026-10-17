@@ -470,3 +470,6 @@ tbody tr:hover { background: #F8F0E8 !important; }
   .record-drawer, .assistant-panel { width: 100%; }
   .toast { right: var(--ui-space-3); left: var(--ui-space-3); bottom: var(--ui-space-3); }
 }
+
+.table-pagination { display: flex; align-items: center; gap: var(--ui-space-2); }
+.table-pagination button { min-width: 32px; min-height: 32px; }

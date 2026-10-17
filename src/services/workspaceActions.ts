@@ -9,6 +9,8 @@ export const actionSchema = z.discriminatedUnion("type", [
   z.object({type:z.literal("smartEntry"),proposal:entrySchema}).strict(),
   z.object({ type: z.literal("configure"), operations: z.array(operationSchema).min(1).max(100) }).strict(),
   z.object({ type: z.literal("stageProposal"), proposal: z.unknown() }).strict(),
+  z.object({ type: z.literal("applyProposal"), proposal: z.unknown() }).strict(),
+  z.object({ type: z.literal("configureAndPublish"), operations: z.array(operationSchema).min(1).max(100) }).strict(),
   z.object({ type: z.literal("publish") }).strict(),
   z.object({ type: z.literal("discardDraft") }).strict(),
   z.object({ type: z.literal("restoreVersion"), version: z.number().int().positive() }).strict(),
@@ -24,6 +26,8 @@ export function dispatchWorkspaceAction(workspace: Workspace, input: unknown, de
     case "smartEntry": return applyEntry(workspace,action.proposal,deferWorkflows);
     case "configure": return saveConfigurationDraft(workspace, action.operations);
     case "stageProposal": return stageProposal(workspace, action.proposal);
+    case "applyProposal": return publishConfiguration(stageProposal(workspace, action.proposal));
+    case "configureAndPublish": return publishConfiguration(saveConfigurationDraft(workspace, action.operations));
     case "publish": return publishConfiguration(workspace);
     case "restoreVersion": return restoreConfigurationDraft(workspace, action.version);
     case "discardDraft": requirePermission(workspace, "editStructure"); return { ...workspace, configurationDraft: undefined, revision: (workspace.revision || 0) + 1 };

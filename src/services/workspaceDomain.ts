@@ -116,28 +116,42 @@ export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, p
 }
 
 export function saveRecord(w: Workspace, entityId: string, incoming: DataRecord, source: "manual" | "import" | "ai" = "manual", deferWorkflows = false): Workspace {
+  return saveRecords(w, entityId, [incoming], source, deferWorkflows);
+}
+
+/** A batch is atomic to callers and clones the aggregate only once. */
+export function saveRecords(w: Workspace, entityId: string, records: DataRecord[], source: "manual" | "import" | "ai" = "manual", deferWorkflows = false): Workspace {
   requirePermission(w, "editRecords");
-  const entity = entityById(w, entityId);
+  const next = structuredClone(w);
+  for (const incoming of records) saveRecordInPlace(next, entityId, incoming, source, deferWorkflows);
+  next.alerts = deriveAlerts(next.entities);
+  return next;
+}
+
+function saveRecordInPlace(next: Workspace, entityId: string, incoming: DataRecord, source: "manual" | "import" | "ai", deferWorkflows: boolean) {
+  const entity = entityById(next, entityId);
   if (entity.archived) throw new DomainError("This module is archived.");
   incoming = calculateFields(entity.fields, incoming);
-  const errors = validateRecord(w, entity, incoming);
+  const errors = validateRecord(next, entity, incoming);
   if (Object.keys(errors).length) throw new DomainError(Object.values(errors).join(" "));
-  const next = structuredClone(w);
-  next.revision = (w.revision || 0) + 1;
+  next.revision = (next.revision || 0) + 1;
   const target = entityById(next, entityId);
   const previous = target.records.find(r => r.id === incoming.id);
   if(["company-sites","company-contacts"].includes(entityId) && incoming.primary) target.records.filter(r=>r.company===incoming.company && r.id!==incoming.id).forEach(r=>{r.primary=false});
   if (previous) target.records = target.records.map(r => r.id === incoming.id ? structuredClone(incoming) : r);
   else target.records.unshift(structuredClone(incoming));
   if (!deferWorkflows) runWorkflows(next, target, target.records.find(r => r.id === incoming.id)!, previous);
-  next.alerts = deriveAlerts(next.entities);
   log(next, source, `${previous ? "Updated" : "Created"} ${entity.name} record`, entityId, incoming.id);
-  return next;
 }
 export function deleteRecord(w: Workspace, entityId: string, recordId: string): Workspace {
   requirePermission(w, "deleteRecords");
   const next = structuredClone(w), entity = entityById(next, entityId);
   if (!entity.records.some(r => r.id === recordId)) throw new DomainError("This record no longer exists.");
+  for (const source of next.entities) for (const field of source.fields) {
+    if (field.type !== "relation" || field.relationEntityId !== entityId) continue;
+    const dependent = source.records.find(record => !(source.id === entityId && record.id === recordId) && record[field.id] === recordId && (field.required || field.requiredWhen && record[field.requiredWhen.fieldId] === field.requiredWhen.equals));
+    if (dependent) throw new DomainError(`Cannot delete: ${source.name} requires this record through ${field.name}. Update the dependent records first.`);
+  }
   entity.records = entity.records.filter(r => r.id !== recordId);
   for (const source of next.entities) for (const field of source.fields.filter(f => f.type === "relation" && f.relationEntityId === entityId)) for (const record of source.records) if (record[field.id] === recordId) record[field.id] = null;
   next.comments = (next.comments || []).filter(c => c.entityId !== entityId || c.recordId !== recordId);

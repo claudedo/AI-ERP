@@ -7,16 +7,19 @@ const groups = [ /pagament|incass|payment|fattur|invoice/, /immobil|casa|propert
 export function selectChatContext(workspace: Workspace, message: string, contextId?: string): ChatContext {
   const text = normalize(message), tokens = text.match(/[a-z0-9-]{3,}/g) || [];
   const active = workspace.entities.filter(e => !e.archived);
-  const relevant = new Set(active.filter(e => e.id === contextId || groups.some(group => group.test(text) && group.test(normalize(`${e.id} ${e.name}`))) || e.records.some(r => tokens.some(token => Object.values(r).some(v => typeof v === "string" && normalize(v).includes(token) && !/^(abbiamo|ricevuto|nuovo|della|delle|cliente|mostrami|quanto|questo|mese|euro)$/.test(token))))).map(e => e.id));
+  // Normalize and score once, not repeatedly inside sort comparators.
+  const scores = new Map(active.map(entity => [entity.id, entity.records.map(record => {
+    const values = Object.values(record).filter((v): v is string => typeof v === "string").map(normalize);
+    const matching = tokens.filter(token => values.some(value => value.includes(token)));
+    return { record, score: matching.length, relevant: matching.some(token => !/^(abbiamo|ricevuto|nuovo|della|delle|cliente|mostrami|quanto|questo|mese|euro)$/.test(token)), entityScore: matching.filter(token => !/^(abbiamo|ricevuto|nuovo|della|delle|cliente|mostrami|quanto|questo|mese|euro|pagamento)$/.test(token)).length };
+  })]));
+  const relevant = new Set(active.filter(e => e.id === contextId || groups.some(group => group.test(text) && group.test(normalize(`${e.id} ${e.name}`))) || scores.get(e.id)!.some(item => item.relevant)).map(e => e.id));
   // One relation hop supplies candidate links, not an indiscriminate database dump.
   active.filter(e => relevant.has(e.id)).forEach(e => e.fields.filter(f => f.type === "relation" && f.relationEntityId).forEach(f => relevant.add(f.relationEntityId!)));
   let budget = 40;
-  const scoreEntity = (entity: typeof active[number]) => (relevant.has(entity.id) ? 10 : 0) + (entity.id === contextId ? 2 : 0) + Math.max(0, ...entity.records.map(record => tokens.filter(token => !/^(abbiamo|ricevuto|nuovo|della|delle|cliente|mostrami|quanto|questo|mese|euro|pagamento)$/.test(token) && Object.values(record).some(value => typeof value === "string" && normalize(value).includes(token))).length));
-  const entities = [...active].sort((a, b) => scoreEntity(b) - scoreEntity(a)).slice(0, 50).map(entity => {
-    const ranked = relevant.has(entity.id) ? [...entity.records].sort((a, b) => {
-      const score = (r: DataRecord) => tokens.filter(t => Object.values(r).some(v => typeof v === "string" && normalize(v).includes(t))).length;
-      return score(b) - score(a);
-    }).slice(0, Math.min(12, budget)) : [];
+  const entityScores = new Map(active.map(e => [e.id, (relevant.has(e.id) ? 10 : 0) + (e.id === contextId ? 2 : 0) + scores.get(e.id)!.reduce((max, item) => Math.max(max, item.entityScore), 0)]));
+  const entities = [...active].sort((a, b) => entityScores.get(b.id)! - entityScores.get(a.id)!).slice(0, 50).map(entity => {
+    const ranked = relevant.has(entity.id) ? [...scores.get(entity.id)!].sort((a, b) => b.score - a.score).slice(0, Math.min(12, budget)).map(item => item.record) : [];
     budget -= ranked.length;
     const records = ranked.map(record => {
       const projected: Record<string, string | number | boolean | null> = { id: record.id };

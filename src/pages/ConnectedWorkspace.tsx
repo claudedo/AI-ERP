@@ -220,7 +220,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       {workspace && (
         <>
           <button className="secondary" onClick={()=>setEntry(true)}>NODUS AI</button>
-          {entry&&<AssistantPanel workspace={workspace} contextId={entity?.id} setWorkspace={()=>false} canBuild={!!role?.permissions.editStructure} token={token} onApplyStructure={async proposal=>{if(!(await execute({type:"stageProposal",proposal})))return false;return execute({type:"publish"})}} setActiveEntity={setActive} setDelayedOnly={()=>{}} onOpenResult={(entityId,id)=>{setActive(entityId);setRecordId(id);setEntry(false)}} onToast={setNotice} onClose={()=>setEntry(false)} onApplyEntry={proposal=>execute({type:"smartEntry",proposal})}/>}
+          {entry&&<AssistantPanel workspace={workspace} contextId={entity?.id} setWorkspace={()=>false} canBuild={!!role?.permissions.editStructure} token={token} onApplyStructure={proposal=>execute({type:"applyProposal",proposal})} setActiveEntity={setActive} setDelayedOnly={()=>{}} onOpenResult={(entityId,id)=>{setActive(entityId);setRecordId(id);setEntry(false)}} onToast={setNotice} onClose={()=>setEntry(false)} onApplyEntry={proposal=>execute({type:"smartEntry",proposal})}/>}
           <nav>
             {workspace.entities
               .filter((item) => !item.archived)
@@ -255,16 +255,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
               onDeleteRecord={(recordId) =>
                 execute({ type: "deleteRecord", entityId: entity.id, recordId })
               }
-              onSaveView={async (view) => {
-                if (
-                  !(await execute({
-                    type: "configure",
-                    operations: [{ type: "createView", view }],
-                  }))
-                )
-                  return false;
-                return execute({ type: "publish" });
-              }}
+              onSaveView={view => execute({ type: "configureAndPublish", operations: [{ type: "createView", view }] })}
               onImport={() =>
                 setError(
                   "Bulk import is available in the local demo. Connected mode currently accepts validated record actions individually.",

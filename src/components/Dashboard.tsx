@@ -7,15 +7,11 @@ import type { DashboardWidget, Workspace } from "../types";
 import { WIDGET_KINDS, widgetMetric } from "../services/dashboardMetrics";
 
 export function Dashboard({workspace,onAsk,onOpen,canCustomize,onWidgetsChange}:{workspace:Workspace;onAsk:()=>void;onOpen:(id:string)=>void;canCustomize:boolean;onWidgetsChange:(widgets:DashboardWidget[])=>boolean}){
- const all=workspace.entities.flatMap(e=>e.records);
- const orders=workspace.entities.find(e=>/orders/i.test(e.name));
- const customers=workspace.entities.find(e=>/customers|clients|leads/i.test(e.name));
  const valueEntity=workspace.entities.find(e=>/orders/i.test(e.name)&&e.fields.some(f=>f.type==="currency"))||workspace.entities.find(e=>e.fields.some(f=>f.type==="currency"));
  const valueField=valueEntity?.fields.find(f=>f.type==="currency");
  const valuedRecords=valueEntity&&valueField?valueEntity.records.filter(r=>r[valueField.id]!==""&&r[valueField.id]!=null&&Number.isFinite(Number(r[valueField.id]))):[];
  const total=valuedRecords.reduce((n,r)=>n+Number(r[valueField!.id]),0);
  const attention=workspace.alerts.length;
- const open=orders?.records.filter(r=>!["delivered","complete","completed"].includes(String(r.status).toLowerCase())).length||0;
  const greeting=new Date().getHours()<12?"Good morning":new Date().getHours()<18?"Good afternoon":"Good evening";
  const activity=(workspace.activity?.length?workspace.activity:workspace.changeHistory.map(change=>({summary:change.summary,at:change.at}))).slice(0,4).map(entry=>({title:entry.summary,time:new Date(entry.at).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}));
  const widgets=workspace.dashboardWidgets||[{id:"records",kind:"record-count" as const},{id:"value",kind:"sum" as const},{id:"status",kind:"status" as const},{id:"assigned",kind:"assigned" as const}];

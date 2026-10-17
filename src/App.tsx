@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { loadOnboarding, ONBOARDING_KEY } from "./services/onboarding";
 import { upgradeCompanies } from "./services/companies";
 import { routeTo } from "./hooks/useWorkspaceRoute";
@@ -10,13 +10,13 @@ import {
 import { useWorkspace } from "./hooks/useWorkspace";
 import type { Analysis, ArchitectureOption } from "./types";
 import { Landing } from "./pages/Landing";
-import { Builder } from "./pages/Builder";
-import { WorkspaceApp } from "./pages/WorkspaceApp";
 import { downloadText } from "./services/importExport";
 import { localWorkspaceRepository } from "./services/workspaceStorage";
-import { VisualBuilder } from "./builder/VisualBuilder";
 import { dispatchWorkspaceAction } from "./services/workspaceActions";
-import { ConnectedWorkspace } from "./pages/ConnectedWorkspace";
+const Builder = lazy(() => import("./pages/Builder").then(module => ({ default: module.Builder })));
+const WorkspaceApp = lazy(() => import("./pages/WorkspaceApp").then(module => ({ default: module.WorkspaceApp })));
+const VisualBuilder = lazy(() => import("./builder/VisualBuilder").then(module => ({ default: module.VisualBuilder })));
+const ConnectedWorkspace = lazy(() => import("./pages/ConnectedWorkspace").then(module => ({ default: module.ConnectedWorkspace })));
 
 type Stage =
   | "landing"
@@ -27,6 +27,10 @@ type Stage =
   | "building"
   | "workspace";
 export default function App() {
+  return <Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Loading NODUS…</main>}><Application /></Suspense>;
+}
+
+function Application() {
   const { workspace, setWorkspace, reset, storageError } = useWorkspace();
   const [initialDraft] = useState(loadOnboarding);
   const [description, setDescription] = useState(initialDraft.description);

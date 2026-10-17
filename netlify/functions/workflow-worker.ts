@@ -2,6 +2,7 @@ import { database, authorizeMembership, withMembers, respond } from "../../serve
 import { persistWorkspace } from "../../server/repository";
 import { requirePermission, runWorkflows } from "../../src/services/workspaceDomain";
 import type { DataRecord, Workspace } from "../../src/types";
+import { cleanupOrphanAttachments } from "../../server/attachmentCleanup";
 
 export const config = { schedule: "* * * * *" };
 export default async function worker() {
@@ -19,7 +20,7 @@ export default async function worker() {
           const principal = authorizeMembership(event.actor_id, members as unknown as Parameters<typeof authorizeMembership>[1]);
           const [row] = await job`SELECT payload FROM workspaces WHERE organization_id=${event.organization_id}::uuid FOR UPDATE`;
           if (!row) throw new Error("Workspace no longer exists.");
-          const workspace = await withMembers(row.payload as Workspace, principal);
+          const workspace = await withMembers(structuredClone(row.payload as Workspace), principal, job);
           requirePermission(workspace, "editRecords");
           const entity = workspace.entities.find(item => item.id === event.entity_id), record = entity?.records.find(item => item.id === event.record_id);
           if (!entity || !record || JSON.stringify(record) !== JSON.stringify(event.record)) {
@@ -31,7 +32,7 @@ export default async function worker() {
           runWorkflows(workspace, entity, record, event.previous_record as DataRecord | undefined);
           const failure = workspace.workflows.flatMap(flow => flow.runs).find(run => !previousRunIds.has(run.id) && run.status === "failed");
           if (failure) throw new Error(failure.summary);
-          await persistWorkspace(job, event.organization_id, event.actor_id, workspace);
+          await persistWorkspace(job, event.organization_id, event.actor_id, workspace, row.payload as Workspace);
           await job`UPDATE workflow_events SET status='complete',attempts=attempts+1 WHERE id=${event.id}::uuid AND organization_id=${event.organization_id}::uuid`;
           await job`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${event.organization_id}::uuid,${event.actor_id}::uuid,'workflow-event',${job.json({ eventId: event.id })})`;
         });
@@ -43,5 +44,6 @@ export default async function worker() {
     if (!found) break;
     processed++;
   }
-  return respond({ processed });
+  const removedAttachments = await cleanupOrphanAttachments();
+  return respond({ processed, removedAttachments });
 }

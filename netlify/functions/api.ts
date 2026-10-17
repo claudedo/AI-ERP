@@ -27,7 +27,7 @@ export default async function handler(request: Request): Promise<Response> {
     const rows = await sql`SELECT payload FROM workspaces WHERE organization_id=${principal.organizationId}::uuid`;
     let workspace = rows[0] ? await withMembers(rows[0].payload as Workspace, principal) : null;
     if (request.method === "GET") {
-      const attachments = await sql`SELECT id,entity_id,record_id,filename,mime,size,status FROM attachments WHERE organization_id=${principal.organizationId}::uuid AND status='ready'`;
+      const attachments = await sql`SELECT a.id,a.entity_id,a.record_id,a.filename,a.mime,a.size,a.status FROM attachments a WHERE a.organization_id=${principal.organizationId}::uuid AND a.status='ready' AND EXISTS(SELECT 1 FROM records r WHERE r.organization_id=a.organization_id AND r.entity_id=a.entity_id AND r.id=a.record_id)`;
       const events = await sql`SELECT id,status,attempts,error,created_at FROM workflow_events WHERE organization_id=${principal.organizationId}::uuid ORDER BY created_at DESC LIMIT 30`;
       return respond({ workspace, organizationId: principal.organizationId, role: principal.roleId, attachments, events, aiConfigured: !!process.env.AI_PROVIDER_URL && !!process.env.AI_PROVIDER_API_KEY });
     }
@@ -58,9 +58,9 @@ export default async function handler(request: Request): Promise<Response> {
         const [receipt] = await tx`SELECT request_hash,response FROM action_receipts WHERE organization_id=${principal.organizationId}::uuid AND request_id=${body.requestId}::uuid`;
         if (receipt) { if (receipt.request_hash !== hash) throw new HttpError(409, "Request identifier was reused for another action."); return receipt.response as Workspace; }
         if (Number(locked.revision) !== body.expectedRevision) throw new HttpError(409, "Another member changed the workspace. Refresh and retry; no changes were applied.");
-        const current = await withMembers(locked.payload as Workspace, principal);
+        const current = await withMembers(locked.payload as Workspace, principal, tx);
         const updated = dispatchWorkspaceAction(current, body.command, true);
-        await persistWorkspace(tx, principal.organizationId, principal.userId, updated);
+        await persistWorkspace(tx, principal.organizationId, principal.userId, updated, locked.payload as Workspace);
         if (body.command.type === "saveRecord") {
           const command = body.command, previous = current.entities.find(entity => entity.id === command.entityId)?.records.find(record => record.id === command.record.id);
           const saved = updated.entities.find(entity => entity.id === command.entityId)!.records.find(record => record.id === command.record.id)!;
@@ -109,6 +109,11 @@ export default async function handler(request: Request): Promise<Response> {
     }
     const [attachment] = await sql`SELECT * FROM attachments WHERE organization_id=${principal.organizationId}::uuid AND id=${body.id}::uuid`;
     if (!attachment) throw new HttpError(404, "Attachment not found.");
+    // Orphans remain deletable for cleanup, but must never be completed or downloaded.
+    if (body.action !== "attachmentDelete") {
+      const [record] = await sql`SELECT id FROM records WHERE organization_id=${principal.organizationId}::uuid AND entity_id=${attachment.entity_id} AND id=${attachment.record_id}`;
+      if (!record) throw new HttpError(404, "The attachment's record no longer exists.");
+    }
     if (body.action === "attachmentComplete") {
       requirePermission(workspace, "editRecords");
       const { data, error } = await bucket.info(attachment.object_path);

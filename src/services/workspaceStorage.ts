@@ -3,8 +3,9 @@ import { demoWorkflows, relationsFor, roles, users } from "../data/templates";
 import { deriveAlerts } from "./aiEngine";
 import { newId } from "./workspaceDomain";
 import { upgradeCompanies } from "./companies";
+import { assertStoredWorkspace } from "./workspaceSchema";
 
-export interface WorkspaceRepository { load(): Workspace | null; save(workspace: Workspace): void; clear(): void; raw(): string | null; backupKeys(): string[] }
+export interface WorkspaceRepository { load(): Workspace | null; save(workspace: Workspace, expectedRaw?: string | null): void; clear(): void; raw(): string | null; backupKeys(): string[] }
 export const WORKSPACE_KEY = "ai-business-os-workspace";
 const SCHEMA_VERSION = 5;
 
@@ -37,6 +38,7 @@ function migrate(value: unknown): Workspace {
   if (workspace.version < 3) workspace = migrateV2ToV3(workspace);
   if (workspace.version < 4) workspace = { ...workspace, version: 4, configurationVersion: 1, configurationHistory: [] };
   if (workspace.version < 5) workspace = upgradeCompanies(workspace);
+  assertStoredWorkspace(workspace);
   return workspace;
 }
 export const localWorkspaceRepository: WorkspaceRepository = {
@@ -57,7 +59,9 @@ export const localWorkspaceRepository: WorkspaceRepository = {
     }
     return migrated;
   },
-  save(w) {
+  save(w, expectedRaw) {
+    // Reject stale snapshots before writing; the caller keeps its unsaved draft.
+    if (expectedRaw !== undefined && localStorage.getItem(WORKSPACE_KEY) !== expectedRaw) throw new Error("Another tab changed this workspace. Reload before saving; your changes were not applied.");
     try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(w)); }
     catch { throw new Error("Workspace could not be saved. Browser storage may be full; remove large data or export a backup."); }
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Trash2, X } from "lucide-react";
 import { AlertDialog, Dialog } from "radix-ui";
 import type { DataRecord, Entity, Field, Workspace } from "../types";
@@ -61,6 +61,9 @@ export function RecordDrawer({
       : ({ ...blank, ...initialValues, id: newId("record") } as DataRecord),
   );
   const [initial] = useState(() => JSON.stringify(draft));
+  const [originalRecord] = useState(() => record ? JSON.stringify(record) : null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [tab, setTab] = useState("Panoramica");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,7 +72,12 @@ export function RecordDrawer({
     setErrors((current) => ({ ...current, [id]: "" }));
   };
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
+      const latest = workspace.entities.find(e => e.id === entity.id)?.records.find(r => r.id === draft.id);
+      if (originalRecord !== null && JSON.stringify(latest) !== originalRecord) throw new Error("This record changed while you were editing. Reopen it before saving; your draft has not been applied.");
       const calculated = calculateFields(entity.fields, draft);
       const next = validateRecord(workspace, entity, calculated);
       setErrors(next);
@@ -82,6 +90,9 @@ export function RecordDrawer({
       setErrors({
         form: error instanceof Error ? error.message : "Calculation failed.",
       });
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
   const guard = useCloseGuard(
@@ -367,7 +378,7 @@ export function RecordDrawer({
                   <button className="secondary">Cancel</button>
                 </Dialog.Close>
                 {canEdit && (
-                  <button className="primary" onClick={save}>
+                  <button className="primary" onClick={save} disabled={saving} aria-busy={saving}>
                     Save record
                   </button>
                 )}

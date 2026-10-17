@@ -53,6 +53,15 @@ The build type-checks browser code and Netlify Functions. `npm run dev` serves t
 
 ## Persistence and migrations
 
+### Reliability and performance hardening
+
+- Required and conditionally required relations block parent deletion; optional links are cleared as before.
+- Import previews use domain validation, reject ambiguous linked names and reserved IDs, and import batches atomically with one aggregate clone. CSV export preserves visible column order and neutralizes formula-like text cells.
+- Persisted workspaces are structurally validated after migration. Stale local snapshots are rejected before writing and cross-tab storage changes are surfaced without overwriting an open draft. This is optimistic detection, not an atomic multi-process database; simultaneous browser writes are still a local-demo limitation.
+- Main screens load lazily; tables render 50 rows per page, with deferred search and indexed relation labels. Search and CSV export continue to include the entire filtered result, not only the current page.
+- Connected projection writes are incremental and transactional membership reads reuse the transaction connection. Structural proposal confirmation is one atomic server action.
+- `npm test` covers regression cases; `node scripts/browser-smoke.mjs` runs isolated Chrome against `dist` (build first; set `CHROME_BIN` when needed). GitHub Actions runs tests, build, browser smoke and unused-code checks on push/PR. Hosted database, Storage and quota integration still require the live checklist in `docs/BACKEND.md`.
+
 The original `ai-business-os-workspace` key is retained. Schema migrations 1 → 2 → 3 → 4 → 5 save the previous JSON under a timestamped backup key before migration. Version 4 adds draft/version metadata; version 5 unifies company registries and their relations as described above. Corrupt data and quota failures are surfaced without silent reset. File blobs are in IndexedDB; JSON contains metadata only.
 
 IDs survive renaming. Populated fields cannot be destructively removed or changed to incompatible types through publication: create a replacement field and explicitly migrate data. Supported relationships are many-to-one and unique one-to-one. For many-to-many, use a link module with two relation fields. Local data is single-browser, not a shared organizational backup.

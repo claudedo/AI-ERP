@@ -1,5 +1,6 @@
 import type { DataRecord, Entity, Field, FieldType, RecordValue, Workspace } from "../types";
-import { currentRole, DomainError, newId, saveRecord } from "./workspaceDomain";
+import { currentRole, DomainError, newId, saveRecords, validateRecord } from "./workspaceDomain";
+import { calculateFields } from "./formulas";
 
 export interface ParsedSheet { name: string; headers: string[]; rows: string[][] }
 export interface ImportMapping { column: number; fieldId: string; type: FieldType }
@@ -84,7 +85,10 @@ function convert(raw: string, field: Field, workspace: Workspace): RecordValue {
   if (field.type === "checkbox") { if (/^(si|sì|yes|true|1)$/i.test(raw)) return true; if (/^(no|false|0)$/i.test(raw)) return false; throw new DomainError(`${field.name}: invalid checkbox “${raw}”.`); }
   if (field.type === "relation") {
     const target = workspace.entities.find(e => e.id === field.relationEntityId);
-    const linked = target?.records.find(r => r.id === raw || target.fields.some(f => f.type === "text" && String(r[f.id]).toLowerCase() === raw.toLowerCase()));
+    const exact = target?.records.find(r => r.id === raw);
+    const matches = exact ? [exact] : target?.records.filter(r => target.fields.some(f => f.type === "text" && String(r[f.id]).toLowerCase() === raw.toLowerCase())) || [];
+    if (matches.length > 1) throw new DomainError(`${field.name}: “${raw}” matches multiple records. Use the exact record ID.`);
+    const linked = matches[0];
     if (!linked) throw new DomainError(`${field.name}: linked record “${raw}” was not found.`);
     return linked.id;
   }
@@ -107,10 +111,13 @@ function targetEntity(plan: ImportPlan, w: Workspace): Entity {
   });
   if (!fields.length) throw new DomainError("Map at least one column.");
   if (new Set(fields.map(f => f.id)).size !== fields.length) throw new DomainError("Two columns cannot map to the same field.");
+  if (fields.some(f => ["id", "assigneeId", "__proto__", "constructor", "prototype"].includes(f.id))) throw new DomainError("This field identifier is reserved. Rename the mapped field.");
   return { id, name, fields, records: [] };
 }
 export function previewImport(plan: ImportPlan, w: Workspace): ImportPreview {
   const entity = targetEntity(plan, w), issues: ImportIssue[] = [], records: DataRecord[] = [];
+  const validationEntity = { ...entity, records: [...entity.records] };
+  const validationWorkspace = { ...w, entities: [...w.entities.filter(e => e.id !== entity.id), validationEntity] };
   const duplicateField = entity.fields.find(f => f.id === plan.duplicateFieldId) || entity.fields[0];
   const keys = new Set(entity.records.map(r => String(r[duplicateField.id] ?? "").trim().toLowerCase()).filter(Boolean));
   for (let i = 0; i < plan.sheet.rows.length; i++) {
@@ -121,11 +128,14 @@ export function previewImport(plan: ImportPlan, w: Workspace): ImportPreview {
         if (!field) throw new DomainError(`Mapped field ${mapping.fieldId} no longer exists.`);
         record[field.id] = convert(source[mapping.column] || "", field, w);
       }
-      for (const field of entity.fields.filter(f => f.required)) if (record[field.id] == null || record[field.id] === "") throw new DomainError(`${field.name} is required.`);
-      const key = String(record[duplicateField.id] ?? "").trim().toLowerCase();
+      const calculated = calculateFields(entity.fields, record);
+      const errors = validateRecord(validationWorkspace, validationEntity, calculated);
+      if (Object.keys(errors).length) throw new DomainError(Object.values(errors).join(" "));
+      const key = String(calculated[duplicateField.id] ?? "").trim().toLowerCase();
       if (key && keys.has(key)) throw new DomainError(`Duplicate ${duplicateField.name}: ${record[duplicateField.id]}. Row skipped.`);
       if (key) keys.add(key);
-      records.push(record);
+      records.push(calculated);
+      validationEntity.records.push(calculated);
     } catch (error) { issues.push({ row: i + 2, reason: error instanceof Error ? error.message : "Invalid row." }); }
   }
   return { accepted: records.length, skipped: issues.length, issues, records, entity };
@@ -136,12 +146,17 @@ export function executeImport(plan: ImportPlan, w: Workspace): { workspace: Work
   const report = previewImport(plan, w);
   let next = structuredClone(w);
   if (!plan.entityId) { next.entities.push(report.entity); next.revision = (next.revision || 0) + 1; }
-  for (const record of report.records) next = saveRecord(next, report.entity.id, record, "import");
+  next = saveRecords(next, report.entity.id, report.records, "import");
   return { workspace: next, report };
 }
 export function exportCsv(entity: Entity, rows: DataRecord[], columns: string[]): string {
-  const fields = entity.fields.filter(f => columns.includes(f.id));
-  const quote = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const fields = columns.flatMap(id => entity.fields.find(f => f.id === id) || []);
+  const quote = (value: unknown) => {
+    const text = String(value ?? "");
+    // Quoting alone does not prevent spreadsheet formula execution. Preserve numeric cells.
+    const safe = typeof value === "string" && /^[\s\uFEFF]*[=+@\-\t\r\n]/.test(text) ? `'${text}` : text;
+    return `"${safe.replace(/"/g, '""')}"`;
+  };
   return `\uFEFF${[fields.map(f => quote(f.name)), ...rows.map(r => fields.map(f => quote(r[f.id])))].map(row => row.join(";")).join("\r\n")}`;
 }
 export function downloadText(text: string, filename: string, mime = "text/csv;charset=utf-8") {

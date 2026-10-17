@@ -1,4 +1,4 @@
-import type { DataRecord, Entity, Field, Workspace } from "../types";
+import type { Entity, Field, Workspace } from "../types";
 import { relationsFor } from "../data/templates";
 
 const text = (id: string, name: string, required = false): Field => ({
