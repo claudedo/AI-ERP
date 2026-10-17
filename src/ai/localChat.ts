@@ -1,7 +1,7 @@
 import type { Workspace } from "../types";
 import type { ChatResponse } from "./chatContract";
 import { paymentGuard } from "./paymentGuard";
-import { chatIntent } from "../services/nodusChat";
+import { chatIntent, isChatQuestion } from "../services/nodusChat";
 import { proposeEntry } from "../services/smartEntry";
 import { currentRole } from "../services/workspaceDomain";
 import { localConfigurationProvider } from "./configurationProvider";
@@ -41,7 +41,7 @@ export async function localChat(message: string, workspace: Workspace, contextId
     }
   }
   const proposal = proposeEntry(message, workspace, contextId);
-  if (intent === "records" || proposal.operations.length) {
+  if (intent === "records" || !isChatQuestion(message) && proposal.operations.length) {
     if (!role.permissions.editRecords) return { type: "unsupported", source: "local", message: "Il tuo ruolo consente solo di consultare i dati." };
     if (!proposal.operations.length) return { type: "clarification", source: "local", message: "Servono altri dettagli per preparare una proposta senza inventare dati.", questions: proposal.questions.length ? proposal.questions : ["Quale record e quali valori vuoi utilizzare?"], extracted: [] };
     return { type: proposal.operations.some(op => op.kind === "update") ? "update_proposal" : "entry_proposal", source: "local", message: "Verifica la proposta modificabile. Nessun dato è stato salvato.", proposal };

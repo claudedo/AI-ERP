@@ -25,6 +25,19 @@ const fixture = () => {
 const envelope = (extra = {}) => ({ type: "answer", message: "Ciao, come posso aiutarti?", query: null, changes: [], structure_json: null, questions: [], ...extra });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("NODUS AI: structured contract and financial safety", () => {
+  it.each(["Quanti pagamenti abbiamo ricevuto questo mese?", "Mostrami i pagamenti ricevuti"])("does not redirect payment queries into insertion: %s", async message => {
+    const w = fixture(); w.users.find(u => u.id === w.currentUserId)!.roleId = "viewer";
+    expect(paymentGuard(message, w)).toBeNull();
+    const result = await localChat(message, w);
+    expect(result.type).not.toBe("entry_proposal"); expect(result.message).not.toMatch(/non l.inserimento|solo di consultare/);
+    const model = validateModelReply(envelope({ type: "query_results", query: { entityId: "payments", filters: [], metric: "count", fieldId: null, groupBy: null } }), w, message);
+    expect(model.type).toBe("query_results");
+  });
+  it("handles imperative payments before the model without a provider call", async () => {
+    const w = fixture(), fetcher = vi.fn(); vi.stubEnv("OPENAI_API_KEY", "test-only");
+    const result = await openaiChat({ message: request, mode: "demo", requestId: crypto.randomUUID(), history: [] }, selectChatContext(w, request), w, fetcher);
+    expect(result.type).toBe("entry_proposal"); expect(result.source).toBe("local"); expect(fetcher).not.toHaveBeenCalled();
+  });
   it("recognizes natural payment input as records, not a generic question", () => expect(chatIntent(request)).toBe("records"));
   it("rejects unknown response types, invalid shapes and extra keys", () => {
     expect(chatResponseSchema.safeParse({ type: "write_now", message: "saved", source: "openai" }).success).toBe(false);

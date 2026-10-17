@@ -80,6 +80,8 @@ export function validateModelReply(input: unknown, workspace: Workspace, message
 
 /** No tools, browsing, writes, key logging, or provider error bodies. */
 export async function openaiChat(body: ChatRequest, context: ChatContext, authoritative?: Workspace, fetcher: typeof fetch = fetch): Promise<ChatResponse> {
+  const guarded = paymentGuard(body.message, authoritative || contextWorkspace(context));
+  if (guarded) return guarded;
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("Unavailable");
   const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;

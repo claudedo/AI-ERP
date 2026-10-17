@@ -7,6 +7,7 @@ import { authenticate, database, respond, withMembers } from "../../server/platf
 import type { Workspace } from "../../src/types";
 import { createHash } from "node:crypto";
 import { reserveChatQuota } from "../../server/chatQuota";
+import { paymentGuard } from "../../src/ai/paymentGuard";
 
 const limiter = new ChatRateLimit();
 // Enforced by Netlify before invoking any Function instance (not an in-memory counter).
@@ -42,6 +43,8 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const context = workspace ? selectChatContext(workspace, body.message, body.contextId) : body.context;
     if (!context || context.entities.reduce((n, e) => n + e.records.length, 0) > 40 || JSON.stringify(context).length > 60000 || body.history.reduce((n, turn) => n + turn.q.length + turn.a.length, 0) > 12000) return respond(unavailable, 400);
     const target = workspace || contextWorkspace(context);
+    const guarded = paymentGuard(body.message, target);
+    if (guarded) return respond(guarded);
     const reservation = process.env.OPENAI_API_KEY ? await reserveChatQuota(quotaClient) : null;
     if (!reservation) return respond(await localChat(body.message, target, body.contextId));
     try { return respond(await openaiChat(body, context, workspace)); }

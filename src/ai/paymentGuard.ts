@@ -4,10 +4,11 @@ import { absoluteDate, applyEntry, type EntryProposal } from "../services/smartE
 import { currentRole, newId } from "../services/workspaceDomain";
 import { parseItalianNumber } from "../services/importExport";
 import { normalize } from "./chatContext";
+import { isChatQuestion } from "../services/nodusChat";
 
 /** High-risk financial extraction is deterministic; the model cannot choose an ambiguous link. */
 export function paymentGuard(message: string, workspace: Workspace, source: "local" | "openai" = "local"): ChatResponse | null {
-  if (!/pagament|incasso/i.test(message) || !/ricevut|nuovo|registra|aggiungi|inserisci/i.test(message)) return null;
+  if (isChatQuestion(message) || !/pagament|incasso/i.test(message) || !/\b(?:nuov[oa]|registra|aggiungi|inserisci)\b/i.test(message)) return null;
   const match = message.match(/(\d[\d.,]*)\s*(mila|milion[ei])?\s*(?:euro|€)/i),
     parsed = match ? parseItalianNumber(match[1]) : null,
     amount = parsed === null ? null : parsed * (match?.[2]?.toLowerCase() === "mila" ? 1000 : /milion/i.test(match?.[2] || "") ? 1000000 : 1),

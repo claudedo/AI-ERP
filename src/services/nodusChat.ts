@@ -1,8 +1,10 @@
 import { entrySchema, type EntryProposal } from "./smartEntry";
 import { entryMatchesIntent } from "./entryIntent";
 import type { Workspace } from "../types";
+export const isChatQuestion = (text: string) => /\?|\b(?:quanti|quante|quanto|quali|quale|mostra(?:mi)?|elenca|totale)\b/i.test(text);
 
 export function chatIntent(text: string): "structure" | "records" | "question" {
+  if (isChatQuestion(text)) return "question";
   const modification = /\b(crea|aggiungi|inserisci|registra|sposta|aggiorna|cambiato|modifica|cambia|ricevuto|ricevuta|segna|create|add|update|change|rename|remove|rimuovi)\b/i.test(text);
   const schema = /\b(modul[oi]|module|field|camp[oi]|workflow|schema|relation|relazion[ei]|view|vista)\b/i.test(text) || /\b(?:add|aggiungi)\s+(?:a |an |un |uno )?(?:status|stato)\s+(?:to|a|agli|al)\b/i.test(text);
   return modification ? schema ? "structure" : "records" : "question";
