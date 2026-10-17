@@ -42,9 +42,11 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const context = workspace ? selectChatContext(workspace, body.message, body.contextId) : body.context;
     if (!context || context.entities.reduce((n, e) => n + e.records.length, 0) > 40 || JSON.stringify(context).length > 60000 || body.history.reduce((n, turn) => n + turn.q.length + turn.a.length, 0) > 12000) return respond(unavailable, 400);
     const target = workspace || contextWorkspace(context);
-    if (!process.env.OPENAI_API_KEY || !(await reserveChatQuota(quotaClient))) return respond(await localChat(body.message, target, body.contextId));
+    const reservation = process.env.OPENAI_API_KEY ? await reserveChatQuota(quotaClient) : null;
+    if (!reservation) return respond(await localChat(body.message, target, body.contextId));
     try { return respond(await openaiChat(body, context, workspace)); }
     catch {
+      await reservation.refund();
       // A provider outage, invalid JSON, timeout, missing key or quota error never writes data.
       return respond(await localChat(body.message, target, body.contextId));
     }
