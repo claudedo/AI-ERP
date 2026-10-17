@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Command, GitBranch, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import type { Workspace } from "../types";
@@ -12,6 +12,8 @@ import { publishConfiguration, proposalSchema, stageProposal, type StructuredPro
 import { requestChat } from "../ai/chatClient";
 import { executeChatQuery } from "../ai/chatQueries";
 import type { OperatorResult } from "../services/operatorEngine";
+import { StructureOperations } from "./StructureOperations";
+import { reviewStructure } from "../services/structureReview";
 
 type Message = { q: string; a: string; result?: OperatorResult };
 export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult, onClose, onToast, contextId, onApplyEntry, onApplyStructure, token }: {
@@ -31,6 +33,13 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
     try { const p = proposalSchema.safeParse(JSON.parse(localStorage.getItem(key) || "null")?.structure); return p.success ? p.data : null; } catch { return null; }
   });
   const [clarification, setClarification] = useState("");
+  const [excluded, setExcluded] = useState<string[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem(key) || "null")?.structureExcluded; return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []; } catch { return []; }
+  });
+  const reviewed = useMemo(() => {
+    if (!structure) return null;
+    try { return reviewStructure(workspace, structure, excluded); } catch { return null; }
+  }, [workspace, structure, excluded]);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [source, setSource] = useState<"openai" | "local" | null>(null);
   const lock = useRef(false), alive = useRef(true), scrollRef = useRef<HTMLDivElement>(null);
@@ -38,9 +47,9 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
   const canClarify = !!entry && (!!entry.questions.length || entry.builder) || !!structure?.ambiguities.length;
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify({ input, messages: messages.slice(-30), entry, structure })); }
+    try { localStorage.setItem(key, JSON.stringify({ input, messages: messages.slice(-30), entry, structure, structureExcluded: excluded })); }
     catch { setError("Conversazione non salvata: memoria del browser insufficiente."); }
-  }, [input, messages, entry, structure, key]);
+  }, [input, messages, entry, structure, excluded, key]);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [messages, entry, structure, busy]);
   const append = (q: string, a: string, result?: OperatorResult) => setMessages(m => [...m.slice(-29), { q, a, result }]);
   const guard = useCloseGuard(!!input.trim() || pending || busy, onClose);
@@ -59,7 +68,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
       } else {
         append(text, reply.message + (reply.type === "clarification" ? "\n" + reply.questions.filter(q => q !== reply.message).join("\n") + (reply.extracted.length ? "\n" + reply.extracted.map(v => `${v.label}: ${typeof v.value === "number" ? v.value.toLocaleString("it-IT") : v.value}`).join(" · ") : "") : ""));
         if (reply.type === "entry_proposal" || reply.type === "update_proposal") { setEntry(reply.proposal); setStructure(null); setClarification(""); }
-        else if (reply.type === "structure_proposal") { setStructure(reply.proposal); setEntry(null); setClarification(""); }
+        else if (reply.type === "structure_proposal") { setStructure(reply.proposal); setExcluded([]); setEntry(null); setClarification(""); }
         else if (reply.type === "clarification") { setClarification(request); setEntry(null); setStructure(null); }
         else { setClarification(""); }
       }
@@ -73,7 +82,8 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
     try {
       requirePermission(workspace, "editStructure");
       if (role.id !== "admin") throw new Error("Admin required");
-      const ok = onApplyStructure ? await onApplyStructure(structure) : setWorkspace(publishConfiguration(stageProposal(workspace, structure)));
+      const selected = reviewStructure(workspace, structure, excluded);
+      const ok = onApplyStructure ? await onApplyStructure(selected) : setWorkspace(publishConfiguration(stageProposal(workspace, selected)));
       if (!ok) throw new Error("Save failed");
       append("Proposta confermata", "Struttura aggiornata e salvata nella cronologia del gestionale.");
       setStructure(null); onToast("Struttura aggiornata");
@@ -95,7 +105,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
           if (ok) { append("Proposta confermata", "Dati salvati. Dashboard e cronologia sono aggiornate; puoi continuare qui."); onToast("Dati salvati"); }
           return ok;
         }} />}
-        {structure && <section className="proposal-card"><div className="proposal-label"><GitBranch />PROPOSTA STRUTTURA</div><h3>{structure.interpretation}</h3><p>{structure.impact}</p><p>{structure.operations.length} modifiche proposte · revisione {structure.baseRevision}</p>{structure.ambiguities.map(question => <p role="alert" key={question}>{question}</p>)}<div className="proposal-actions"><button className="secondary" disabled={busy} onClick={() => { setStructure(null); append("Proposta annullata", "Nessuna modifica applicata."); }}>Annulla</button><button className="primary" disabled={busy || !!structure.ambiguities.length || role.id !== "admin"} onClick={() => void confirmStructure()}>Conferma</button></div></section>}
+        {structure && <section className="proposal-card"><div className="proposal-label"><GitBranch />PROPOSTA STRUTTURA</div><h3>{structure.interpretation}</h3><p>{structure.impact}</p><p>{reviewed?.operations.length || 0} modifiche selezionate · revisione {structure.baseRevision}</p><StructureOperations proposal={structure} workspace={workspace} excluded={excluded} disabled={busy} onToggle={key => setExcluded(previous => previous.includes(key) ? previous.filter(item => item !== key) : [...previous, key])} />{structure.ambiguities.map(question => <p role="alert" key={question}>{question}</p>)}{!reviewed && !structure.ambiguities.length && <p role="alert">Seleziona almeno un’operazione valida. Controlla dipendenze e revisione del workspace.</p>}<div className="proposal-actions"><button className="secondary" disabled={busy} onClick={() => { setStructure(null); append("Proposta annullata", "Nessuna modifica applicata."); }}>Annulla</button><button className="primary" disabled={busy || !reviewed || !!structure.ambiguities.length || role.id !== "admin"} onClick={() => void confirmStructure()}>Conferma</button></div></section>}
         {busy && <p role="status">NODUS AI sta elaborando…</p>}
         {error && <p role="alert" className="field-error">{error}</p>}
         {!messages.length && !pending && <div className="prompt-list"><label>PROVA A CHIEDERE</label>{suggestions.map(s => <button key={s} disabled={busy} onClick={() => void run(s)}>{s}<span>↗</span></button>)}</div>}
