@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { Check, Command, GitBranch, Info, Search, X } from "lucide-react";
-import { Dialog, Tabs } from "radix-ui";
+import { useEffect, useRef, useState } from "react";
+import { Check, Command, GitBranch, Info, X } from "lucide-react";
+import { Dialog } from "radix-ui";
+import { SmartEntry } from "./SmartEntry";
+import { applyEntry, proposeEntry, type EntryProposal } from "../services/smartEntry";
 import type { ChangeProposal, Workspace } from "../types";
 import {
   applyProposal,
@@ -15,9 +17,9 @@ import {
 } from "../services/operatorEngine";
 import { requirePermission } from "../services/workspaceDomain";
 import { useCloseGuard } from "./ui/useCloseGuard";
+import { chatIntent, loadConversation } from "../services/nodusChat";
 
 export function AssistantPanel({
-  initialMode = "operator",
   workspace,
   setWorkspace,
   canBuild,
@@ -26,9 +28,9 @@ export function AssistantPanel({
   onOpenResult,
   onClose,
   onToast,
-  onSmartEntry,
+  contextId,
+  onApplyEntry,
 }: {
-  initialMode?: "operator" | "builder";
   workspace: Workspace;
   setWorkspace: (w: Workspace) => boolean;
   canBuild: boolean;
@@ -37,37 +39,14 @@ export function AssistantPanel({
   onOpenResult: (entityId: string, recordId: string) => void;
   onClose: () => void;
   onToast: (m: string, error?: boolean) => void;
-  onSmartEntry?: (text: string) => void;
+  contextId?: string;
+  onApplyEntry?: (proposal: EntryProposal) => boolean | Promise<boolean>;
 }) {
-  const conversationKey = `nodus-conversation-${workspace.id}-${initialMode}`;
-  const [conversation] = useState(() => {
-    try {
-      const value = JSON.parse(localStorage.getItem(conversationKey) || "null");
-      return {
-        input: typeof value?.input === "string" ? value.input : "",
-        messages: Array.isArray(value?.messages)
-          ? value.messages
-              .filter(
-                (m: unknown) =>
-                  !!m &&
-                  typeof m === "object" &&
-                  "q" in m &&
-                  typeof m.q === "string" &&
-                  "a" in m &&
-                  typeof m.a === "string",
-              )
-              .slice(-30)
-              .map((m: { q: string; a: string }) => ({ q: m.q, a: m.a }))
-          : [],
-      };
-    } catch {
-      return { input: "", messages: [] };
-    }
-  });
+  const conversationKey = `nodus-ai-${workspace.id}`;
+  const [conversation] = useState(() => loadConversation(localStorage, workspace.id));
   const [conversationError, setConversationError] = useState("");
-  const [mode, setMode] = useState<"operator" | "builder">(
-    initialMode === "builder" && canBuild ? "builder" : "operator",
-  );
+  const [entry, setEntry] = useState<EntryProposal | null>(conversation.entry);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState(conversation.input);
   const [messages, setMessages] = useState<
     { q: string; a: string; result?: OperatorResult }[]
@@ -76,18 +55,16 @@ export function AssistantPanel({
     try {
       localStorage.setItem(
         conversationKey,
-        JSON.stringify({ input, messages: messages.slice(-30) }),
+        JSON.stringify({ input, messages: messages.slice(-30), entry }),
       );
     } catch {
       setConversationError(
         "Conversazione non salvata: memoria browser insufficiente.",
       );
     }
-  }, [input, messages, conversationKey]);
+  }, [input, messages, conversationKey, entry]);
   const [proposal, setProposal] = useState<ChangeProposal | null>(null);
-  const suggestions =
-    mode === "builder"
-      ? [
+  const suggestions = [ ...(canBuild ? [
           "Add a Priority field to Orders",
           "Create a Quality Control module",
           "Add an approval workflow for orders above €20,000",
@@ -95,53 +72,40 @@ export function AssistantPanel({
           "Add a relation between Orders and Customers",
           "Add a status to Orders",
           "Create a view for Orders",
-        ]
-      : [
+        ] : []), ...[
           "Show me delayed orders",
           "What needs attention today?",
           "What do I need to approve?",
           "Which tasks are assigned to me?",
           "Summarize orders by customer",
-        ];
+        ]];
   const run = (text = input) => {
-    if (!text.trim()) return;
-    if (
-      mode === "operator" &&
-      onSmartEntry &&
-      /\b(crea|aggiungi|inserisci|registra|sposta|aggiorna|cambiato|modifica|create|add)\b/i.test(
-        text,
-      )
-    ) {
+    if (!text.trim() || proposal || (entry && !entry.questions.length && !entry.builder)) return;
+    const intent = chatIntent(text);
+    const structure = intent === "structure";
+    if (entry && structure) {
+      setConversationError("Annulla la proposta dati prima di preparare una modifica alla struttura.");
+      return;
+    }
+    setConversationError("");
+    const request = entry ? `${entry.request}\n${text}` : text;
+    const candidate = structure ? null : proposeEntry(request, workspace, contextId);
+    if (!structure && (entry || intent === "records" || candidate?.operations.length)) {
       try {
         requirePermission(workspace, "editRecords");
-        try {
-          localStorage.setItem(
-            conversationKey,
-            JSON.stringify({
-              input: "",
-              messages: [
-                ...messages,
-                {
-                  q: text,
-                  a: "Proposta aperta in Inserisci con AI: verifica e conferma i dati prima del salvataggio.",
-                },
-              ].slice(-30),
-            }),
-          );
-        } catch {
-          onToast("Conversazione non salvata nel browser.", true);
-        }
-        onSmartEntry(text);
+        setEntry(candidate);
+        setMessages(m => [...m, { q: text, a: "Ho preparato una proposta qui nella chat. Verifica i valori e conferma: nessun dato è ancora stato salvato." }]);
+        setInput("");
       } catch {
         onToast("Il tuo ruolo consente solo la consultazione dei dati.", true);
       }
       return;
     }
-    const action = interpretCommand(text, mode);
+    const action = interpretCommand(text, structure ? "builder" : "operator");
     let answer =
         "I couldn’t match that request yet. Try one of the suggested commands.",
       result: OperatorResult | undefined;
-    if (mode === "builder") {
+    if (structure) {
       if (!canBuild) {
         answer =
           "Your current role can use business data, but only an Admin can change workspace structure.";
@@ -161,7 +125,7 @@ export function AssistantPanel({
       result = answerOperator(action, workspace);
       answer = result.answer;
     }
-    setMessages((m) => [...m, { q: text, a: answer, result }]);
+    setMessages((m) => [...m.slice(-29), { q: text, a: answer, result }]);
     setInput("");
   };
   const confirm = () => {
@@ -237,19 +201,15 @@ export function AssistantPanel({
     ]);
     setProposal(null);
   };
-  const switchMode = (value: string) => {
-    const next = value as "operator" | "builder";
-    setMode(next);
-    setProposal(null);
-  };
-  const guard = useCloseGuard(!!input.trim() || !!proposal, onClose);
+  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [messages, entry, proposal]);
+  const guard = useCloseGuard(!!input.trim() || !!proposal || !!entry, onClose);
   return (
     <>
       <Dialog.Root open onOpenChange={(open) => !open && guard.requestClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="assistant-overlay" />
           <Dialog.Content
-            className="assistant-panel"
+            className="assistant-panel unified-ai"
             aria-describedby="assistant-description"
             onCloseAutoFocus={(e) => e.preventDefault()}
             onOpenAutoFocus={(e) => {
@@ -267,7 +227,7 @@ export function AssistantPanel({
                 <div>
                   <Dialog.Title>NODUS AI</Dialog.Title>
                   <Dialog.Description id="assistant-description">
-                    Your connected workspace
+                    Una conversazione per tutto il workspace
                   </Dialog.Description>
                 </div>
               </div>
@@ -277,37 +237,20 @@ export function AssistantPanel({
                 </button>
               </Dialog.Close>
             </header>
-            <Tabs.Root value={mode} onValueChange={switchMode}>
-              <Tabs.List className="mode-switch" aria-label="AI mode">
-                <Tabs.Trigger value="operator">
-                  <Search />
-                  Operator<small>Use your data</small>
-                </Tabs.Trigger>
-                <Tabs.Trigger value="builder" disabled={!canBuild}>
-                  <GitBranch />
-                  Builder
-                  <small>
-                    {canBuild ? "Change your system" : "Admin only"}
-                  </small>
-                </Tabs.Trigger>
-              </Tabs.List>
-            </Tabs.Root>
-            <div className="assistant-content">
+            <div className="assistant-content" ref={scrollRef}>
               {conversationError && <p role="alert">{conversationError}</p>}
               <div className="assistant-capability">
-                Local rules engine · no external AI service connected
+                Demo locale a regole · modello esterno non attivo
               </div>
               <div className="ai-message">
                 <span>
                   <NodusLogo variant="mark" />
                 </span>
                 <p>
-                  {mode === "operator"
-                    ? "Ask about records, exceptions and daily operations."
-                    : "Describe a change. I’ll show a proposal before anything is applied."}
+                  Chiedimi informazioni, incolla dati da inserire o descrivi una modifica al gestionale. Le proposte restano nella stessa conversazione.
                 </p>
               </div>
-              {messages.map((m, i) => (
+              <div role="log" aria-label="Conversazione NODUS AI" aria-live="polite">{messages.map((m, i) => (
                 <div className="conversation" key={i}>
                   <div className="user-message">{m.q}</div>
                   <div className="ai-message">
@@ -351,7 +294,15 @@ export function AssistantPanel({
                     </div>
                   )}
                 </div>
-              ))}
+              ))}</div>
+              {entry && <SmartEntry key={entry.id} embedded workspace={workspace} contextId={contextId} initialText={entry.request} initialProposal={entry} onDraftChange={setEntry} onClose={() => setEntry(null)} onBuilder={() => {
+                setEntry(null);
+                setMessages(m => [...m, { q: "Modifica dello schema", a: "Proposta dati annullata senza salvare. Descrivi qui i moduli o campi da aggiungere." }]);
+              }} onApply={async next => {
+                const ok = onApplyEntry ? await onApplyEntry(next) : setWorkspace(applyEntry(workspace, next));
+                if (ok) { setMessages(m => [...m, { q: "Proposta confermata", a: "Dati salvati. Puoi continuare qui nella stessa conversazione." }]); onToast("Dati salvati"); }
+                return ok;
+              }} />}
               {proposal && (
                 <div className="proposal-card">
                   <div className="proposal-label">
@@ -392,7 +343,7 @@ export function AssistantPanel({
                   </div>
                 </div>
               )}
-              {messages.length === 0 && !proposal && (
+              {messages.length === 0 && !proposal && !entry && (
                 <div className="prompt-list">
                   <label>TRY ASKING</label>
                   {suggestions.map((s) => (
@@ -408,18 +359,16 @@ export function AssistantPanel({
               <textarea
                 aria-label="Messaggio per NODUS AI"
                 value={input}
+                maxLength={10000}
+                disabled={!!proposal || (!!entry && !entry.questions.length && !entry.builder)}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     run();
                   }
                 }}
-                placeholder={
-                  mode === "builder"
-                    ? "Describe a workspace change..."
-                    : "Ask about your business..."
-                }
+                placeholder={proposal || (entry && !entry.questions.length && !entry.builder) ? "Conferma o annulla la proposta per continuare" : entry ? "Aggiungi i dettagli mancanti alla richiesta…" : "Fai una domanda, inserisci dati o descrivi una modifica…"}
               />
               <div>
                 <span>
@@ -429,7 +378,7 @@ export function AssistantPanel({
                 <button
                   aria-label="Invia messaggio"
                   onClick={() => run()}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || !!proposal || (!!entry && !entry.questions.length && !entry.builder)}
                 >
                   ↑
                 </button>

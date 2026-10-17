@@ -8,7 +8,6 @@ import {
   ChevronsUpDown,
   Command,
   FileUp,
-  GitBranch,
   History,
   LayoutDashboard,
   LogOut,
@@ -37,7 +36,6 @@ import { ImportWizard } from "../components/ImportWizard";
 import { CommandPalette } from "../components/CommandPalette";
 import { ApprovalsPage } from "../components/ApprovalsPage";
 import { useWorkspaceRoute } from "../hooks/useWorkspaceRoute";
-import { SmartEntry } from "../components/SmartEntry";
 import { applyEntry } from "../services/smartEntry";
 import {
   addAttachment,
@@ -120,11 +118,7 @@ export function WorkspaceApp({
   onConnected: () => void;
 }) {
   const [active, setActive] = useWorkspaceRoute(workspace);
-  const [entry, setEntry] = useState<{ text?: string } | null>(null);
   const [assistant, setAssistant] = useState(false),
-    [assistantModeHint, setAssistantModeHint] = useState<
-      "operator" | "builder"
-    >("operator"),
     [mobileNav, setMobileNav] = useState(false),
     [delayedOnly, setDelayedOnly] = useState(false),
     [toast, setToast] = useState(""),
@@ -301,8 +295,7 @@ export function WorkspaceApp({
       return false;
     }
   };
-  const openAssistant = (hint: "operator" | "builder" = "operator") => {
-    setAssistantModeHint(hint);
+  const openAssistant = (_hint: "operator" | "builder" = "operator") => {
     setAssistant(true);
   };
   const go = (id: string) => {
@@ -522,25 +515,8 @@ export function WorkspaceApp({
             )}
             <button onClick={() => openAssistant("operator")}>
               <Search />
-              <span>NODUS AI · Operator</span>
+              <span>NODUS AI</span>
             </button>
-            <Hint
-              label={
-                permissions.editStructure
-                  ? "Change modules, fields and workflows"
-                  : "Admin only"
-              }
-              side="right"
-            >
-              <button
-                onClick={() => openAssistant("builder")}
-                className={!permissions.editStructure ? "disabled" : ""}
-                aria-disabled={!permissions.editStructure}
-              >
-                <GitBranch />
-                <span>NODUS AI · Builder</span>
-              </button>
-            </Hint>
             <button
               className="reset-demo"
               onClick={() => setConfirmReset(true)}
@@ -674,11 +650,6 @@ export function WorkspaceApp({
               {!permissions.editRecords && <small>Read only</small>}
             </div>
             <div className="top-actions">
-              {permissions.editRecords && (
-                <button className="secondary" onClick={() => setEntry({})}>
-                  Inserisci con AI
-                </button>
-              )}
               <Hint label="Command palette" shortcut="⌘K">
                 <button
                   className="icon-button"
@@ -835,7 +806,7 @@ export function WorkspaceApp({
               onAttach={attachToRecord}
               onRemoveAttachment={removeRecordAttachment}
               onOpenRelated={goRecord}
-              onSmartEntry={() => setEntry({})}
+              onSmartEntry={() => openAssistant()}
               onSaveRelated={(id, record) => {
                 try {
                   return commit(
@@ -945,8 +916,6 @@ export function WorkspaceApp({
         </main>
         {assistant && (
           <AssistantPanel
-            key={assistantModeHint}
-            initialMode={assistantModeHint}
             workspace={workspace}
             setWorkspace={setWorkspace}
             canBuild={permissions.editStructure}
@@ -961,20 +930,8 @@ export function WorkspaceApp({
             }}
             onClose={() => setAssistant(false)}
             onToast={notify}
-            onSmartEntry={(text) => {
-              setAssistant(false);
-              setEntry({ text });
-            }}
-          />
-        )}
-        {entry && (
-          <SmartEntry
-            workspace={workspace}
             contextId={entity?.id}
-            initialText={entry.text}
-            onClose={() => setEntry(null)}
-            onBuilder={onBuilder}
-            onApply={(proposal) => {
+            onApplyEntry={(proposal) => {
               try {
                 return commit(
                   applyEntry(workspace, proposal),

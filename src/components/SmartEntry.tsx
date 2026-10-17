@@ -16,6 +16,9 @@ export function SmartEntry({
   onApply,
   onClose,
   onBuilder,
+  embedded = false,
+  initialProposal,
+  onDraftChange,
 }: {
   workspace: Workspace;
   contextId?: string;
@@ -23,6 +26,9 @@ export function SmartEntry({
   onApply: (proposal: EntryProposal) => boolean | Promise<boolean>;
   onClose: () => void;
   onBuilder: () => void;
+  embedded?: boolean;
+  initialProposal?: EntryProposal;
+  onDraftChange?: (proposal: EntryProposal | null) => void;
 }) {
   const key = `nodus-entry-${workspace.id}`;
   const [saved] = useState(() => {
@@ -40,20 +46,22 @@ export function SmartEntry({
   });
   const [text, setText] = useState(initialText || saved?.text || ""),
     [proposal, setProposal] = useState<EntryProposal | null>(
-      saved?.proposal || null,
+      initialProposal || (embedded ? null : saved?.proposal) || null,
     ),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [company, setCompany] = useState("");
   const lock = useRef(false);
-  const guard = useCloseGuard(Boolean(text || proposal), onClose);
+  const guard = useCloseGuard(!embedded && Boolean(text || proposal), onClose);
+  useEffect(() => { if (embedded && proposal) onDraftChange?.(proposal); }, [embedded, proposal, onDraftChange]);
   useEffect(() => {
+    if (embedded) return;
     try {
       localStorage.setItem(key, JSON.stringify({ text, proposal }));
     } catch {
       setError("Bozza non salvata: memoria browser insufficiente.");
     }
-  }, [text, proposal, key]);
+  }, [text, proposal, key, embedded]);
   const generate = () => {
     try {
       const next = proposeEntry(text, workspace, contextId, new Date(), {
@@ -131,7 +139,8 @@ export function SmartEntry({
     try {
       if (await onApply(proposal)) {
         localStorage.removeItem(key);
-        guard.finish();
+        if (embedded) onClose();
+        else guard.finish();
       } else setError("Salvataggio non riuscito. La proposta è conservata.");
     } catch (cause) {
       setError(
@@ -142,15 +151,8 @@ export function SmartEntry({
       setBusy(false);
     }
   };
-  return (
-    <>
-      <Dialog.Root open onOpenChange={(open) => !open && guard.requestClose()}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="drawer-overlay" />
-          <Dialog.Content
-            className="smart-entry workflow-editor"
-            aria-describedby="entry-description"
-          >
+  const content = <>
+          {!embedded && (
             <header>
               <div>
                 <Dialog.Title>Inserisci con AI</Dialog.Title>
@@ -167,7 +169,9 @@ export function SmartEntry({
                 ×
               </button>
             </header>
+          )}
             <div className="workflow-editor-fields">
+              {!embedded && <>
               <label>
                 Testo, email o dati da inserire
                 <textarea
@@ -179,6 +183,7 @@ export function SmartEntry({
                   rows={5}
                 />
               </label>
+              </>}
               <label>
                 Azienda di riferimento (per omonimie)
                 <select
@@ -220,11 +225,11 @@ export function SmartEntry({
                     <button
                       className="secondary"
                       onClick={() => {
-                        guard.finish();
+                        if (!embedded) guard.finish();
                         onBuilder();
                       }}
                     >
-                      Apri Builder per adattare lo schema
+                      {embedded ? "Richiedi una modifica allo schema" : "Apri Builder per adattare lo schema"}
                     </button>
                   )}
                   {proposal.operations.map((op, index) => {
@@ -232,7 +237,7 @@ export function SmartEntry({
                       (e) => e.id === op.entityId,
                     );
                     return (
-                      <fieldset key={`${op.entityId}-${op.record.id}`}>
+                      <fieldset key={`${op.entityId}-${op.record.id}`} disabled={busy}>
                         <legend>
                           {op.kind === "create" ? "Crea" : "Aggiorna"} ·{" "}
                           {entity?.name}
@@ -360,7 +365,7 @@ export function SmartEntry({
               )}
             </div>
             <footer>
-              <button className="secondary" onClick={guard.requestClose}>
+              <button className="secondary" disabled={busy} onClick={embedded ? onClose : guard.requestClose}>
                 Annulla
               </button>
               <button
@@ -376,7 +381,14 @@ export function SmartEntry({
                 {busy ? "Salvataggio…" : "Conferma e salva"}
               </button>
             </footer>
-          </Dialog.Content>
+          </>;
+  if (embedded) return <section className="smart-entry ai-entry-preview" aria-label="Proposta dati">{content}</section>;
+  return (
+    <>
+      <Dialog.Root open onOpenChange={(open) => !open && guard.requestClose()}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="drawer-overlay" />
+          <Dialog.Content className="smart-entry workflow-editor" aria-describedby="entry-description">{content}</Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
       {guard.confirmation}

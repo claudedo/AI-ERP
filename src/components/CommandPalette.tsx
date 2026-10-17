@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FileUp, GitBranch, LayoutDashboard, Search, Zap, X } from "lucide-react";
+import { FileUp, LayoutDashboard, Search, Zap, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import type { Workspace } from "../types";
 import { recordLabel } from "./RecordDrawer";
@@ -11,8 +11,7 @@ export function CommandPalette({ workspace, canEdit, canBuild, onClose, onNaviga
       { id: "dashboard", label: "Dashboard", detail: "Navigate", icon: <LayoutDashboard size={15}/>, run: () => onNavigate("dashboard") },
       { id: "automations", label: "Automations", detail: "Navigate", icon: <Zap size={15}/>, run: () => onNavigate("automations") },
       { id: "approvals", label: "Approvals", detail: "Pending decisions", icon: <Zap size={15}/>, run: () => onNavigate("approvals") },
-      { id: "operator", label: "NODUS AI · Operator", detail: "Ask about live data", icon: <Search size={15}/>, run: () => onAssistant("operator") },
-      ...(canBuild ? [{ id: "builder", label: "NODUS AI · Builder", detail: "Preview a structural change", icon: <GitBranch size={15}/>, run: () => onAssistant("builder") }] : []),
+      { id: "operator", label: "NODUS AI", detail: "Domande, dati e modifiche in una chat", icon: <Search size={15}/>, run: () => onAssistant("operator") },
       ...(canEdit ? [{ id: "import", label: "Import CSV or Excel", detail: "Local data import", icon: <FileUp size={15}/>, run: onImport }] : []),
       ...workspace.entities.map(entity => ({ id: `entity:${entity.id}`, label: entity.name, detail: `${entity.records.length} records · module`, icon: <LayoutDashboard size={15}/>, run: () => onNavigate(entity.id) })),
       ...workspace.entities.flatMap(entity => entity.records.map(record => ({ id: `record:${entity.id}:${record.id}`, label: recordLabel(entity, record), detail: `${entity.name} · record`, icon: <Search size={15}/>, run: () => onRecord(entity.id, record.id) })))

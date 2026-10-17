@@ -216,7 +216,7 @@ export function EntityTable({
               </button>
               {onSmartEntry && (
                 <button className="secondary" onClick={onSmartEntry}>
-                  Inserisci con AI
+                  NODUS AI
                 </button>
               )}
               {(!entity.ui || entity.ui.actions.includes("create")) && (

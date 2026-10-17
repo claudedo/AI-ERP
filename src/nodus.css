@@ -437,6 +437,14 @@ tbody tr:hover { background: #F8F0E8 !important; }
 .smart-entry label { min-width: 0; overflow-wrap: anywhere; }
 .smart-entry input:not([type="checkbox"]), .smart-entry textarea, .smart-entry select { width: 100%; min-width: 0; box-sizing: border-box; }
 .smart-entry footer { flex-wrap: wrap; gap: 8px; }
+.unified-ai { width: min(620px, 100vw); }
+.unified-ai .assistant-content { min-height: 0; overscroll-behavior: contain; }
+.unified-ai .ai-entry-preview { position: static; width: 100%; max-height: none; margin-top: var(--ui-space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: none; }
+.ai-entry-preview .workflow-editor-fields { padding: var(--ui-space-4); overflow: visible; }
+.ai-entry-preview footer { display: flex; justify-content: flex-end; padding: var(--ui-space-3) var(--ui-space-4); border-top: 1px solid var(--line); }
+.ai-entry-preview input, .ai-entry-preview select { padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: inherit; }
+.unified-ai .user-message, .unified-ai .ai-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.unified-ai .assistant-input { flex-shrink: 0; }
 @media(max-width:680px) { .top-actions { gap: 4px; } .top-actions > .secondary { font-size: 11px; padding-inline: 6px; } .smart-entry { width: calc(100vw - 16px); } .company-tabs { padding-inline: 10px; } }
 
 @media (max-width: 900px) and (min-width: 681px) {

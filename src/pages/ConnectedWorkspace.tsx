@@ -10,7 +10,7 @@ import { EntityTable } from "../components/EntityTable";
 import { currentRole } from "../services/workspaceDomain";
 import type { WorkspaceAction } from "../services/workspaceActions";
 import type { Workspace } from "../types";
-import { SmartEntry } from "../components/SmartEntry";
+import { AssistantPanel } from "../components/AssistantPanel";
 
 const publicUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined,
   publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -219,8 +219,8 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       )}
       {workspace && (
         <>
-          {role?.permissions.editRecords&&<button className="secondary" onClick={()=>setEntry(true)}>Inserisci con AI</button>}
-          {entry&&<SmartEntry workspace={workspace} contextId={entity?.id} onClose={()=>setEntry(false)} onBuilder={()=>setBuilder(true)} onApply={proposal=>execute({type:"smartEntry",proposal})}/>}
+          <button className="secondary" onClick={()=>setEntry(true)}>NODUS AI</button>
+          {entry&&<AssistantPanel workspace={workspace} contextId={entity?.id} setWorkspace={()=>false} canBuild={false} setActiveEntity={setActive} setDelayedOnly={()=>{}} onOpenResult={(entityId,id)=>{setActive(entityId);setRecordId(id);setEntry(false)}} onToast={setNotice} onClose={()=>setEntry(false)} onApplyEntry={proposal=>execute({type:"smartEntry",proposal})}/>}
           <nav>
             {workspace.entities
               .filter((item) => !item.archived)
