@@ -3,9 +3,8 @@ import { contextWorkspace, selectChatContext } from "../../src/ai/chatContext";
 import { localChat } from "../../src/ai/localChat";
 import { openaiChat } from "../../server/openaiChat";
 import { ChatRateLimit } from "../../server/chatRateLimit";
-import { authenticate, database, respond, withMembers } from "../../server/platform";
+import { authenticate, database, HttpError, respond, withMembers } from "../../server/platform";
 import type { Workspace } from "../../src/types";
-import { createHash } from "node:crypto";
 import { reserveChatQuota } from "../../server/chatQuota";
 import { paymentGuard } from "../../src/ai/paymentGuard";
 
@@ -18,7 +17,7 @@ export default async function handler(request: Request, netlify: { ip?: string }
   if (request.method !== "POST") return respond(unavailable, 405);
   // Browser same-origin only; no permissive CORS. This is not a substitute for authentication.
   const origin = request.headers.get("origin"), expected = new URL(request.url).origin;
-  if (origin !== expected || request.headers.get("sec-fetch-site") === "cross-site") return respond(unavailable, 403);
+  if (origin !== expected || request.headers.get("sec-fetch-site") === "cross-site") return respond({ error: "Richiesta non autorizzata. Riapri NODUS dal sito ufficiale.", reason: "forbidden" }, 403);
   if (!request.headers.get("content-type")?.includes("application/json")) return respond(unavailable, 415);
   const length = Number(request.headers.get("content-length") || 0);
   if (length > 160000) return respond(unavailable, 413);
@@ -27,9 +26,11 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const parsed = chatRequestSchema.safeParse(JSON.parse(raw));
     if (!parsed.success) return respond(unavailable, 400);
     const body = parsed.data;
-    const fingerprint = createHash("sha256").update(JSON.stringify([body.message, body.context?.workspaceId, body.context?.revision, body.mode])).digest("hex");
     const client = netlify.ip || request.headers.get("x-nf-client-connection-ip") || "unknown";
-    if (!limiter.accept(client, body.requestId, Date.now(), fingerprint)) return respond(unavailable, 429);
+    if (!limiter.accept(client, body.requestId)) {
+      const response = respond({ error: "Troppe richieste, riprova tra un minuto.", reason: "rate_limit" }, 429);
+      response.headers.set("Retry-After", "60"); return response;
+    }
     let quotaClient = `ip:${client}`;
     let workspace: Workspace | undefined;
     if (body.mode === "connected") {
@@ -53,5 +54,8 @@ export default async function handler(request: Request, netlify: { ip?: string }
       // A provider outage, invalid JSON, timeout, missing key or quota error never writes data.
       return respond(await localChat(body.message, target, body.contextId));
     }
-  } catch { return respond(unavailable, 503); }
+  } catch (error) {
+    if (error instanceof HttpError && [401, 403].includes(error.status)) return respond({ error: "Richiesta non autorizzata. Accedi di nuovo e verifica i permessi del workspace.", reason: "forbidden" }, error.status);
+    return respond(unavailable, 503);
+  }
 }

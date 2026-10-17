@@ -131,10 +131,14 @@ describe("minimum context, metrics and fallback", () => {
     expect(result.count).toBe(1); expect(result.answer).toContain("300.000"); expect(result.records[0].recordId).toBe("1");
   });
   it("uses local fallback on missing backend, quota or malformed provider JSON", async () => {
-    for (const fetcher of [vi.fn().mockRejectedValue(new Error("offline")), vi.fn().mockResolvedValue(new Response("{}", { status: 429 })), vi.fn().mockResolvedValue(new Response('{"type":"write_now"}', { headers: { "Content-Type": "application/json" } }))]) {
+    for (const fetcher of [vi.fn().mockRejectedValue(new Error("offline")), vi.fn().mockResolvedValue(new Response('{"type":"write_now"}', { headers: { "Content-Type": "application/json" } }))]) {
       const w = fixture(), reply = await requestChat(w, request, [], undefined, undefined, fetcher);
       expect(reply.source).toBe("local"); expect(reply.type).toBe("entry_proposal"); expect(w.entities[1].records).toHaveLength(0);
     }
+  });
+  it.each([429, 403])("surfaces an explicit Italian error on HTTP %s without silent fallback", async status => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("Blocked", { status }));
+    await expect(requestChat(fixture(), request, [], undefined, undefined, fetcher)).rejects.toThrow(status === 429 ? /Troppe richieste/ : /non autorizzata/);
   });
   it("supports relational city filters without inventing results", () => {
     const w = fixture(); w.entities[1].records = [{ id: "pay-1", amount: 300000, property: "PROP-MODENA-1" }];
@@ -164,8 +168,8 @@ describe("minimum context, metrics and fallback", () => {
     const limiter = new ChatRateLimit(); expect(limiter.accept("ip", "same", 0)).toBe(true); expect(limiter.accept("ip", "same", 1)).toBe(false);
     for (let i = 1; i < 10; i++) expect(limiter.accept("ip", String(i), i)).toBe(true);
     expect(limiter.accept("ip", "11", 20)).toBe(false); expect(limiter.accept("ip", "same", 60001)).toBe(true);
-    expect(limiter.accept("another-ip", "first", 0, "same-content")).toBe(true);
-    expect(limiter.accept("another-ip", "second", 1, "same-content")).toBe(false);
+    expect(limiter.accept("another-ip", "first", 0)).toBe(true);
+    expect(limiter.accept("another-ip", "second", 1)).toBe(true);
   });
   it("keeps fallback replies in Italian without claiming generic language understanding", async () => {
     const reply = await localChat("Domanda non riconosciuta", fixture()); expect(reply.source).toBe("local"); expect(reply.type).toBe("unsupported"); expect(reply.message).toContain("modalità locale");

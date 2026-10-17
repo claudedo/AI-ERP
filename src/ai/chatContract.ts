@@ -27,6 +27,7 @@ export const chatResponseSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("unsupported") }).strict(),
 ]);
 export type ChatResponse = z.infer<typeof chatResponseSchema>;
+export const chatErrorSchema = z.object({ error: z.string().max(1000), reason: z.enum(["rate_limit", "forbidden"]) }).strict();
 export const chatRequestSchema = z.object({
   message: z.string().trim().min(1).max(6000), requestId: z.string().uuid(),
   mode: z.enum(["demo", "connected"]), contextId: safeId.optional(),

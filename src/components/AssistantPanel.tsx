@@ -9,7 +9,7 @@ import { applyEntry, type EntryProposal } from "../services/smartEntry";
 import { loadConversation } from "../services/nodusChat";
 import { currentRole, requirePermission } from "../services/workspaceDomain";
 import { publishConfiguration, proposalSchema, stageProposal, type StructuredProposal } from "../services/configuration";
-import { requestChat } from "../ai/chatClient";
+import { ChatRequestError, requestChat } from "../ai/chatClient";
 import { executeChatQuery } from "../ai/chatQueries";
 import type { OperatorResult } from "../services/operatorEngine";
 import { StructureOperations } from "./StructureOperations";
@@ -73,7 +73,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
         else { setClarification(""); }
       }
       setInput("");
-    } catch { if (alive.current) setError("NODUS AI non è temporaneamente disponibile. Puoi riprovare o usare la modalità locale."); }
+    } catch (cause) { if (alive.current) { setSource(null); setError(cause instanceof ChatRequestError ? cause.message : "NODUS AI non è temporaneamente disponibile. Puoi riprovare o usare la modalità locale."); } }
     finally { lock.current = false; if (alive.current) setBusy(false); }
   };
   const confirmStructure = async () => {
@@ -107,7 +107,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
         }} />}
         {structure && <section className="proposal-card"><div className="proposal-label"><GitBranch />PROPOSTA STRUTTURA</div><h3>{structure.interpretation}</h3><p>{structure.impact}</p><p>{reviewed?.operations.length || 0} modifiche selezionate · revisione {structure.baseRevision}</p><StructureOperations proposal={structure} workspace={workspace} excluded={excluded} disabled={busy} onToggle={key => setExcluded(previous => previous.includes(key) ? previous.filter(item => item !== key) : [...previous, key])} />{structure.ambiguities.map(question => <p role="alert" key={question}>{question}</p>)}{!reviewed && !structure.ambiguities.length && <p role="alert">Seleziona almeno un’operazione valida. Controlla dipendenze e revisione del workspace.</p>}<div className="proposal-actions"><button className="secondary" disabled={busy} onClick={() => { setStructure(null); append("Proposta annullata", "Nessuna modifica applicata."); }}>Annulla</button><button className="primary" disabled={busy || !reviewed || !!structure.ambiguities.length || role.id !== "admin"} onClick={() => void confirmStructure()}>Conferma</button></div></section>}
         {busy && <p role="status">NODUS AI sta elaborando…</p>}
-        {error && <p role="alert" className="field-error">{error}</p>}
+        {error && <div role="alert" className="field-error"><p>{error}</p>{input.trim() && <button className="secondary" disabled={busy} onClick={() => void run()}>Riprova</button>}</div>}
         {!messages.length && !pending && <div className="prompt-list"><label>PROVA A CHIEDERE</label>{suggestions.map(s => <button key={s} disabled={busy} onClick={() => void run(s)}>{s}<span>↗</span></button>)}</div>}
       </div>
       <div className="assistant-input"><textarea aria-label="Messaggio per NODUS AI" value={input} maxLength={6000} disabled={busy || (pending && !canClarify)} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void run(); } }} placeholder={pending && !canClarify ? "Conferma o annulla la proposta per continuare" : "Fai una domanda, inserisci dati o descrivi una modifica…"} /><div><span><Command />Invio per inviare · ⇧ Invio a capo</span><button aria-label="Invia messaggio" disabled={!input.trim() || busy || (pending && !canClarify)} onClick={() => void run()}>↑</button></div></div>
