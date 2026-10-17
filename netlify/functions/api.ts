@@ -8,6 +8,7 @@ import { applicableWorkflows, requirePermission } from "../../src/services/works
 import { analyzeBusiness, generateArchitectureOptions, generateWorkspace, interpretCommand } from "../../src/services/aiEngine";
 import { answerOperator } from "../../src/services/operatorEngine";
 import type { Workspace } from "../../src/types";
+import { chatErrorMessage } from "../../src/ai/chatLanguage";
 
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("mutate"), expectedRevision: z.number().int().nonnegative(), requestId: z.string().uuid(), command: actionSchema }).strict(),
@@ -134,11 +135,11 @@ export default async function handler(request: Request): Promise<Response> {
     if (error) throw new HttpError(502, "Private storage could not authorize the download.");
     return respond({ url: data.signedUrl, expiresIn: 60 });
   } catch (error) {
-    if (error instanceof HttpError) return respond({ error: error.message }, error.status);
-    if (error instanceof z.ZodError || error instanceof SyntaxError) return respond({ error: "Invalid request schema. No operation was applied." }, 400);
-    if (error instanceof Error && error.constructor.name === "DomainError") return respond({ error: error.message }, 403);
+    if (error instanceof HttpError) return respond({ error: chatErrorMessage(error) }, error.status);
+    if (error instanceof z.ZodError || error instanceof SyntaxError) return respond({ error: "Richiesta non valida. Nessuna operazione applicata." }, 400);
+    if (error instanceof Error && error.constructor.name === "DomainError") return respond({ error: chatErrorMessage(error) }, 403);
     // Do not expose SQL, credentials, provider bodies or database connection strings.
     console.error("NODUS API operation failed", error instanceof Error ? error.name : "UnknownError");
-    return respond({ error: "The operation failed. Check server logs or configuration; retry after refreshing." }, 500);
+    return respond({ error: "Operazione non riuscita. Aggiorna il workspace e riprova; se il problema persiste contatta l’amministratore." }, 500);
   }
 }

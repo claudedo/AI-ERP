@@ -8,6 +8,7 @@ import {
   type EntryProposal,
 } from "../services/smartEntry";
 import { useCloseGuard } from "./ui/useCloseGuard";
+import { chatErrorMessage } from "../ai/chatLanguage";
 
 export function SmartEntry({
   workspace,
@@ -73,9 +74,7 @@ export function SmartEntry({
           applyEntry(workspace, next, true);
         } catch (cause) {
           next.questions.push(
-            cause instanceof Error
-              ? cause.message
-              : "Verifica i campi obbligatori.",
+            chatErrorMessage(cause),
           );
         }
       }
@@ -83,9 +82,7 @@ export function SmartEntry({
       setError("");
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "Interpretazione non riuscita.",
+        chatErrorMessage(cause),
       );
     }
   };
@@ -129,7 +126,7 @@ export function SmartEntry({
       setError("");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Verifica non riuscita.",
+        chatErrorMessage(cause),
       );
     }
   };
@@ -145,7 +142,7 @@ export function SmartEntry({
       } else setError("Salvataggio non riuscito. La proposta è conservata.");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Salvataggio non riuscito.",
+        chatErrorMessage(cause),
       );
     } finally {
       lock.current = false;
@@ -252,6 +249,7 @@ export function SmartEntry({
                               {f.required ? " *" : ""}
                               {f.type === "relation" ? (
                                 <select
+                                  aria-label={f.name}
                                   value={String(op.record[f.id] || "")}
                                   onChange={(e) =>
                                     patch(index, f.id, e.target.value)
@@ -286,6 +284,7 @@ export function SmartEntry({
                                 </select>
                               ) : f.options ? (
                                 <select
+                                  aria-label={f.name}
                                   value={String(op.record[f.id] || "")}
                                   onChange={(e) =>
                                     patch(index, f.id, e.target.value)
@@ -298,6 +297,7 @@ export function SmartEntry({
                                 </select>
                               ) : (
                                 <input
+                                  aria-label={f.name}
                                   type={
                                     f.type === "checkbox"
                                       ? "checkbox"

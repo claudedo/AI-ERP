@@ -14,6 +14,7 @@ import { executeChatQuery } from "../ai/chatQueries";
 import type { OperatorResult } from "../services/operatorEngine";
 import { StructureOperations } from "./StructureOperations";
 import { reviewStructure } from "../services/structureReview";
+import { chatErrorMessage } from "../ai/chatLanguage";
 
 type Message = { q: string; a: string; result?: OperatorResult };
 export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult, onClose, onToast, contextId, onApplyEntry, onApplyStructure, token }: {
@@ -73,7 +74,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
         else { setClarification(""); }
       }
       setInput("");
-    } catch (cause) { if (alive.current) { setSource(null); setError(cause instanceof ChatRequestError ? cause.message : "NODUS AI non è temporaneamente disponibile. Puoi riprovare o usare la modalità locale."); } }
+    } catch (cause) { if (alive.current) { setSource(null); setError(cause instanceof ChatRequestError ? cause.message : chatErrorMessage(cause)); } }
     finally { lock.current = false; if (alive.current) setBusy(false); }
   };
   const confirmStructure = async () => {
@@ -87,7 +88,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
       if (!ok) throw new Error("Save failed");
       append("Proposta confermata", "Struttura aggiornata e salvata nella cronologia del gestionale.");
       setStructure(null); onToast("Struttura aggiornata");
-    } catch { setError("La proposta non è stata applicata. Verifica i permessi e che il workspace non sia cambiato."); }
+    } catch (cause) { setError(chatErrorMessage(cause)); }
     finally { lock.current = false; setBusy(false); }
   };
   const suggestions = ["Cosa richiede attenzione oggi?", ...(workspace.entities.some(e => /order|ordin/i.test(e.name)) ? ["Quali ordini sono in ritardo?"] : []), ...(canBuild && role.id === "admin" ? ["Crea un modulo Controllo qualità con nome, esito e data"] : [])];

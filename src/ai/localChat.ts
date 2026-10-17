@@ -9,6 +9,7 @@ import { applyProposal, createProposal, interpretCommand } from "../services/aiE
 import { proposalSchema, type ConfigurationOperation } from "../services/configuration";
 import { newId } from "../services/workspaceDomain";
 import { localExamples, localQuery } from "./localQueries";
+import { chatErrorMessage } from "./chatLanguage";
 
 export async function localChat(message: string, workspace: Workspace, contextId?: string): Promise<ChatResponse> {
   const payment = paymentGuard(message, workspace); if (payment) return payment;
@@ -16,7 +17,10 @@ export async function localChat(message: string, workspace: Workspace, contextId
   if (intent === "question") { const query = localQuery(message, workspace, contextId); if (query) return query; }
   if (intent === "structure") {
     if (role.id !== "admin" || !role.permissions.editStructure) return { type: "unsupported", source: "local", message: "Solo un Admin può proporre modifiche alla struttura." };
-    try { return { type: "structure_proposal", source: "local", message: "Ho preparato una bozza strutturale. Non è ancora applicata.", proposal: await localConfigurationProvider.propose(message, workspace) }; }
+    try {
+      const proposal = await localConfigurationProvider.propose(message, workspace);
+      return { type: "structure_proposal", source: "local", message: "Ho preparato una bozza strutturale. Non è ancora applicata.", proposal: { ...proposal, interpretation: `Crea ${proposal.operations.filter(op => op.type === "createEntity").map(op => op.entity.name).join(", ")}`, impact: "Verrà creato un modulo con i campi selezionati. I dati esistenti non cambiano. Verifica opzioni e relazioni prima di confermare.", ambiguities: proposal.ambiguities.map(text => chatErrorMessage(new Error(text))) } };
+    }
     catch {
       // Preserve the existing quick commands, but stage their schema delta instead of writing.
       const legacy = createProposal(interpretCommand(message, "builder"), workspace);
