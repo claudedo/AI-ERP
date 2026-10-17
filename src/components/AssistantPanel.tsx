@@ -24,7 +24,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
   token?: () => Promise<string>;
 }) {
   const key = `nodus-ai-${workspace.id}`;
-  const [saved] = useState(() => loadConversation(localStorage, workspace.id));
+  const [saved] = useState(() => loadConversation(localStorage, workspace.id, workspace));
   const [messages, setMessages] = useState<Message[]>(saved.messages), [input, setInput] = useState(saved.input);
   const [entry, setEntry] = useState<EntryProposal | null>(saved.entry);
   const [structure, setStructure] = useState<StructuredProposal | null>(() => {

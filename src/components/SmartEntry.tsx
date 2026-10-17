@@ -52,6 +52,7 @@ export function SmartEntry({
     [busy, setBusy] = useState(false),
     [company, setCompany] = useState("");
   const lock = useRef(false);
+  const needsCompany = !embedded || [proposal, initialProposal].some(p => p?.operations.some(op => op.entityId === "companies" || workspace.entities.find(e => e.id === op.entityId)?.fields.some(f => f.relationEntityId === "companies")));
   const guard = useCloseGuard(!embedded && Boolean(text || proposal), onClose);
   useEffect(() => { if (embedded && proposal) onDraftChange?.(proposal); }, [embedded, proposal, onDraftChange]);
   useEffect(() => {
@@ -184,7 +185,7 @@ export function SmartEntry({
                 />
               </label>
               </>}
-              <label>
+              {needsCompany && <label>
                 Azienda di riferimento (per omonimie)
                 <select
                   value={company}
@@ -202,7 +203,7 @@ export function SmartEntry({
                       </option>
                     ))}
                 </select>
-              </label>
+              </label>}
               <button
                 className="primary"
                 disabled={!text.trim() || busy}

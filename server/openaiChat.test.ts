@@ -85,6 +85,11 @@ describe("NODUS AI: structured contract and financial safety", () => {
     expect(() => validateModelReply(envelope({ type: "update_proposal", changes: [{ entityId: "properties", kind: "update", recordId: "not-existing", values: [] }] }), w, "Aggiorna immobile")).toThrow(/Unknown update/);
     expect(() => validateModelReply(envelope({ type: "update_proposal", changes: [{ entityId: "properties", kind: "update", recordId: "PROP-MODENA-1", values: [{ fieldId: "__proto__", value: "x" }] }] }), w, "Aggiorna immobile")).toThrow();
   });
+  it("rejects a model proposal that turns a property request into a company, even with questions", () => {
+    const analysis = analyzeBusiness("real estate agency"), w = upgradeCompanies(generateWorkspace(analysis, generateArchitectureOptions(analysis)[2]));
+    const input = envelope({ type: "entry_proposal", questions: ["Indica una sede"], changes: [{ entityId: "companies", kind: "create", recordId: null, values: [{ fieldId: "name", value: "nuova proprietà da 450 mila euro" }, { fieldId: "partyRole", value: "Cliente" }] }] });
+    expect(() => validateModelReply(input, w, "aggiungi una nuova proprietà da 450 mila euro")).toThrow(/Wrong target entity/);
+  });
   it("flags ambiguous non-financial updates rather than choosing a homonym silently", () => {
     const w = fixture(); w.entities[0].records.push({ id: "PROP-OTHER", reference: "Villa Verdi", city: "Milano" });
     const reply = validateModelReply(envelope({ type: "update_proposal", changes: [{ entityId: "properties", kind: "update", recordId: "PROP-MODENA-1", values: [{ fieldId: "city", value: "Roma" }] }] }), w, "Aggiorna Villa Verdi: città Roma");

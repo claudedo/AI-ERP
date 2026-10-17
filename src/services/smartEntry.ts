@@ -8,6 +8,7 @@ import {
   validateRecord,
 } from "./workspaceDomain";
 import { parseDate, parseItalianNumber } from "./importExport";
+import { creationTarget, entryMatchesIntent, isPropertyEntity } from "./entryIntent";
 
 const scalar = z.union([
   z.string().max(10000),
@@ -137,7 +138,50 @@ export function proposeEntry(
     return draft;
   };
   const supplier = /\bfornitor[ei]\b/i.test(request),
-    create = /\b(crea|aggiungi|inserisci|registra|create|add)\b/i.test(request);
+    create = /\b(crea|creare|aggiungi|aggiungere|inserisci|inserire|registra|registrare|create|add)\b/i.test(request),
+    target = creationTarget(request);
+  if (create && target === "property") {
+    const candidates = w.entities.filter(e => !e.archived && isPropertyEntity(e));
+    const entity = candidates.find(e => e.id === contextId) || (candidates.length === 1 ? candidates[0] : undefined);
+    if (!entity) {
+      proposal.questions.push(candidates.length ? "Quale modulo immobili vuoi utilizzare?" : "Il workspace non contiene un modulo immobili. Indica il modulo corretto: non creerò un’azienda al suo posto.");
+      return proposal;
+    }
+    const record: DataRecord = { id: newId("property") };
+    const amount = request.match(/(\d[\d.,]*)\s*(mila|milion[ei])?\s*(?:euro|€)/i) || request.match(/€\s*(\d[\d.,]*)\s*(mila|milion[ei])?/i);
+    const prices = entity.fields.filter(f => f.type === "currency" && /asking|price|prezzo|valore|amount|importo/i.test(f.id + f.name));
+    const price = prices.find(f => f.id === "askingPrice") || (prices.length === 1 ? prices[0] : undefined);
+    if (amount) {
+      const value = parseItalianNumber(amount[1]);
+      if (price && value !== null) record[price.id] = value * (/^mila$/i.test(amount[2] || "") ? 1000 : /^milion/i.test(amount[2] || "") ? 1000000 : 1);
+      else proposal.questions.push("In quale campo prezzo vuoi inserire l’importo indicato?");
+    }
+    for (const field of entity.fields.filter(f => !f.formula)) {
+      const escaped = [field.name, field.id].map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      if (field.id === "reference") escaped.push("riferimento", "codice");
+      if (field.id === "address") escaped.push("indirizzo");
+      if (field.id === "askingPrice") escaped.push("prezzo");
+      if (field.id === "city") escaped.push("città", "citta");
+      const value = [...request.matchAll(new RegExp(`(?:^|[;\\n])\\s*(?:${escaped.join("|")})\\s*:\\s*([^;\\n]+)`, "gi"))].at(-1)?.[1]?.trim();
+      if (!value) continue;
+      if (field.type === "relation") {
+        const related = w.entities.find(e => e.id === field.relationEntityId);
+        const matches = related?.records.filter(r => [r.id, r.name, r.reference].some(v => norm(v) === norm(value))) || [];
+        if (matches.length === 1) record[field.id] = matches[0].id;
+        else proposal.questions.push(`Indica un collegamento univoco per ${field.name}.`);
+      } else if (["number", "currency"].includes(field.type)) {
+        const quantity = value.match(/^(\d[\d.,]*)\s*(mila|milion[ei])?/i), parsed = quantity ? parseItalianNumber(quantity[1]) : null;
+        if (parsed !== null) record[field.id] = parsed * (/^mila$/i.test(quantity?.[2] || "") ? 1000 : /^milion/i.test(quantity?.[2] || "") ? 1000000 : 1);
+      } else if (field.type === "date") { const date = absoluteDate(value, now); if (date) record[field.id] = date; }
+      else if (field.type === "checkbox") record[field.id] = /^(sì|si|true|yes)$/i.test(value);
+      else record[field.id] = value;
+    }
+    const identifiers = entity.fields.filter(f => /^(reference|riferimento|address|indirizzo|name|nome|title|titolo|codice)$/.test(f.id));
+    if (!identifiers.some(f => String(record[f.id] || "").trim())) proposal.questions.push("Qual è il riferimento o l’indirizzo della proprietà? L’importo è stato estratto, ma non inventerò un’identificazione o un proprietario.");
+    for (const field of entity.fields.filter(f => f.required)) if (record[field.id] == null || record[field.id] === "") proposal.questions.push(`Specifica ${field.name}.`);
+    add(entity, record);
+    return proposal;
+  }
   if (create && /\bordin[ei]\b/i.test(request)) {
     const entity =
       w.entities.find(
@@ -295,10 +339,10 @@ export function proposeEntry(
     }
   } else if (
     create &&
-    (/^\s*(?:crea|aggiungi|inserisci|registra)\s+(?:(?:un|una|il|la)\s+)?(?:attivit[aà]|task|progett[oi]|lead|contatt[oi]|sede|sedi)\b/i.test(
+    (/^\s*(?:crea|aggiungi|inserisci|registra)\s+(?:(?:un|una|il|la|nuovo|nuova)\s+)*(?:attivit[aà]|task|progett[oi]|lead|contatt[oi]|sede|sedi)(?=\s|$|[,;])/i.test(
       request,
     ) ||
-      (contextId &&
+      (contextId && target !== "other" &&
         !["companies", "company-sites", "company-contacts"].includes(
           contextId,
         ) &&
@@ -308,11 +352,10 @@ export function proposeEntry(
   ) {
     const hint =
       request.match(
-        /\b(attivit[aà]|task|progett[oi]|lead|contatt[oi]|sede|sedi)\b/i,
+        /\b(attivit[aà]|task|progett[oi]|lead|contatt[oi]|sede|sedi)(?=\s|$|[,;])/i,
       )?.[1] || "";
     const entity =
-      w.entities.find((e) => e.id === contextId) ||
-      w.entities.find((e) =>
+      (hint ? w.entities.find((e) =>
         /task|attivit/i.test(hint)
           ? /task|attivit/i.test(e.name)
           : /progett/i.test(hint)
@@ -322,7 +365,7 @@ export function proposeEntry(
               : /contatt/i.test(hint)
                 ? e.id === "company-contacts"
                 : e.id === "company-sites",
-      );
+      ) : w.entities.find((e) => e.id === contextId));
     if (!entity) {
       proposal.builder = true;
       proposal.questions.push(
@@ -375,10 +418,10 @@ export function proposeEntry(
       if (date) record[dateField.id] = date;
     }
     add(entity, record);
-  } else if (create && companies) {
+  } else if (create && companies && (target === "company" || target === null && (contextId === "companies" || /\b(?:s\.?r\.?l\.?|s\.?p\.?a\.?|ltd|inc)\b|p\.?\s*iva|partita\s+iva/i.test(request)))) {
     const name = request
       .match(
-        /(?:aggiungi|crea|inserisci|registra|add|create)\s+(?:(?:il|la|un|una)\s+)?(?:(?:fornitore|cliente|azienda)\s+)?([^,;\n]+)/i,
+        /(?:aggiungi|crea|inserisci|registra|add|create)\s+(?:(?:(?:il|la|un|una|nuovo|nuova)\s+)|un['’])*(?:(?:fornitore|cliente|azienda)\s+)?([^,;\n]+)/i,
       )?.[1]
       ?.trim();
     if (!name) {
@@ -452,6 +495,7 @@ export function applyEntry(
 ): Workspace {
   requirePermission(w, "editRecords");
   const p = entrySchema.parse(input);
+  if (!entryMatchesIntent(p, w)) throw new DomainError("La proposta non corrisponde al modulo richiesto. Rigenerala: una proprietà non può essere salvata come azienda.");
   if (w.appliedEntries?.includes(p.id)) return w;
   if (p.baseRevision !== (w.revision || 0))
     throw new DomainError(
@@ -473,6 +517,7 @@ export function applyEntry(
     const entity = next.entities.find((e) => e.id === op.entityId);
     if (!entity) throw new DomainError("Modulo non disponibile.");
     const record = op.record as DataRecord;
+    if (op.kind === "create" && isPropertyEntity(entity) && !entity.fields.filter(f => /^(reference|riferimento|address|indirizzo|name|nome|title|titolo|codice)$/.test(f.id)).some(f => String(record[f.id] || "").trim())) throw new DomainError("Indica il riferimento o l’indirizzo della proprietà prima di confermare.");
     const previous = entity.records.find((r) => r.id === record.id);
     if (
       entity.fields.some((f) => f.id === "value" && f.type === "currency") &&

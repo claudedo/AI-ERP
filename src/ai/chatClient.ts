@@ -5,10 +5,12 @@ import { localChat } from "./localChat";
 import { applyEntry } from "../services/smartEntry";
 import { currentRole } from "../services/workspaceDomain";
 import { chatIntent } from "../services/nodusChat";
+import { entryMatchesIntent } from "../services/entryIntent";
 
 export function validateChatResponse(input: unknown, workspace: Workspace, request: string): ChatResponse {
   const response = chatResponseSchema.parse(input), role = currentRole(workspace);
   if (response.type === "entry_proposal" || response.type === "update_proposal") {
+    if (!entryMatchesIntent({ ...response.proposal, request }, workspace)) throw new Error("La proposta non corrisponde al modulo richiesto.");
     if (!role.permissions.editRecords) throw new Error("Il tuo ruolo consente solo la consultazione.");
     if (response.proposal.baseRevision !== (workspace.revision || 0)) throw new Error("Il workspace è cambiato. Rigenera la proposta.");
     response.proposal.operations.forEach(operation => {
