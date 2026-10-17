@@ -1,8 +1,9 @@
 import { database, authorizeMembership, withMembers, respond } from "../../server/platform";
 import { persistWorkspace } from "../../server/repository";
-import { requirePermission, runWorkflows } from "../../src/services/workspaceDomain";
+import { requirePermission } from "../../src/services/workspaceDomain";
 import type { DataRecord, Workspace } from "../../src/types";
 import { cleanupOrphanAttachments } from "../../server/attachmentCleanup";
+import { executeWorkflowEvent } from "../../server/workflowExecution";
 
 export const config = { schedule: "* * * * *" };
 export default async function worker() {
@@ -27,12 +28,8 @@ export default async function worker() {
             await job`UPDATE workflow_events SET status='superseded',error='Record changed before execution; stale side effects were skipped.' WHERE id=${event.id}::uuid AND organization_id=${event.organization_id}::uuid`;
             return;
           }
-          workspace.revision = (workspace.revision || 0) + 1;
-          const previousRunIds = new Set(workspace.workflows.flatMap(flow => flow.runs.map(run => run.id)));
-          runWorkflows(workspace, entity, record, event.previous_record as DataRecord | undefined);
-          const failure = workspace.workflows.flatMap(flow => flow.runs).find(run => !previousRunIds.has(run.id) && run.status === "failed");
-          if (failure) throw new Error(failure.summary);
-          await persistWorkspace(job, event.organization_id, event.actor_id, workspace, row.payload as Workspace);
+          const updated = executeWorkflowEvent(workspace, entity.id, record.id, event.previous_record as DataRecord | undefined);
+          if (updated) await persistWorkspace(job, event.organization_id, event.actor_id, updated, row.payload as Workspace);
           await job`UPDATE workflow_events SET status='complete',attempts=attempts+1 WHERE id=${event.id}::uuid AND organization_id=${event.organization_id}::uuid`;
           await job`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${event.organization_id}::uuid,${event.actor_id}::uuid,'workflow-event',${job.json({ eventId: event.id })})`;
         });

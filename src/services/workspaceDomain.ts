@@ -59,11 +59,10 @@ const valueOf = (entity: Entity, record: DataRecord) => {
 };
 const labelOf = (entity: Entity, record: DataRecord) => String(record[entity.fields.find(f => f.type === "text")?.id || "id"] || record.id);
 
-export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, previous?: DataRecord) {
+export function workflowApplies(flow: Workflow, entity: Entity, record: DataRecord, previous?: DataRecord): boolean {
+  if (!flow.active) return false;
   const changed = (fieldId: string) => previous?.[fieldId] !== record[fieldId];
-  for (const flow of w.workflows) {
-    if (!flow.active) continue;
-    const config = flow.config;
+  const config = flow.config;
     let shouldRun = false;
     if (config) {
       shouldRun = config.entityId === entity.id && (config.event === "create" ? !previous : config.event === "update" ? Boolean(previous && (!config.fieldId || changed(config.fieldId))) : Boolean(previous && changed(config.fieldId || "status")));
@@ -74,7 +73,13 @@ export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, p
     } else if (flow.id === "confirmed-order-task") shouldRun = /orders/i.test(entity.name) && record.status === "Confirmed" && previous?.status !== "Confirmed";
     else if (flow.id === "delayed-delivery-alert") shouldRun = /deliver/i.test(entity.name) && record.status === "Delayed" && previous?.status !== "Delayed";
     else if (flow.id === "high-value-approval") shouldRun = /orders/i.test(entity.name) && valueOf(entity, record) > 20000 && (!previous || valueOf(entity, previous) <= 20000);
-    if (!shouldRun) continue;
+  return shouldRun;
+}
+export const applicableWorkflows = (w: Workspace, entity: Entity, record: DataRecord, previous?: DataRecord) => w.workflows.filter(flow => workflowApplies(flow, entity, record, previous));
+
+export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, previous?: DataRecord) {
+  for (const flow of applicableWorkflows(w, entity, record, previous)) {
+    const config = flow.config;
     const eventKey = `${flow.id}:${entity.id}:${record.id}:${w.revision || 0}`;
     if (flow.runs.some(run => run.eventKey === eventKey)) continue;
     try {

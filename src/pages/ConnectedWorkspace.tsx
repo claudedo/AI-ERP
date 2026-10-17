@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   ApiWorkspaceRepository,
+  executeWithRecovery,
   type RemoteState,
 } from "../persistence/apiRepository";
 import { ServerConfigurationProvider } from "../ai/configurationProvider";
@@ -66,7 +67,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError("");
     try {
-      const workspace = await repository.execute(current.current, command);
+      const workspace = await executeWithRecovery(repository, current.current, command, next => { current.current = next.workspace; setState(next); });
       current.current = workspace;
       setState((previous) =>
         previous ? { ...previous, workspace } : previous,

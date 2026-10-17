@@ -3,6 +3,15 @@ import type { WorkspaceAction } from "../services/workspaceActions";
 
 export interface RemoteState { workspace: Workspace | null; organizationId: string; role: string; aiConfigured: boolean; attachments: { id: string; entity_id: string; record_id: string; filename: string; mime: string; size: number }[]; events: { id: string; status: string; attempts: number; error?: string }[] }
 export interface AsyncWorkspaceRepository { load(): Promise<RemoteState>; execute(workspace: Workspace, command: WorkspaceAction): Promise<Workspace> }
+export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
+export async function executeWithRecovery(repository: AsyncWorkspaceRepository, workspace: Workspace, command: WorkspaceAction, refreshed: (state: RemoteState) => void) {
+  try { return await repository.execute(workspace, command); }
+  catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 409) throw error;
+    refreshed(await repository.load());
+    throw new ApiError(409, "Il workspace è stato aggiornato da un altro membro o da un’automazione. La bozza non è stata applicata né cancellata. Verifica i dati e riprova; rigenera le proposte AI se necessario.");
+  }
+}
 export class ApiWorkspaceRepository implements AsyncWorkspaceRepository {
   constructor(private token: () => Promise<string>) {}
   async request<T>(body?: unknown): Promise<T> {
@@ -10,7 +19,7 @@ export class ApiWorkspaceRepository implements AsyncWorkspaceRepository {
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) throw new Error("Backend unavailable. Use Netlify Dev or configure the deployed Functions before opening connected mode.");
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || `API error ${response.status}`);
+    if (!response.ok) throw new ApiError(response.status, data.error || `Errore del servizio (${response.status})`);
     return data as T;
   }
   async load() {

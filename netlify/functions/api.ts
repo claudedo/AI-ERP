@@ -4,7 +4,7 @@ import { authenticate, database, HttpError, identity, required, respond, withMem
 import { persistWorkspace } from "../../server/repository";
 import { actionSchema, dispatchWorkspaceAction } from "../../src/services/workspaceActions";
 import { configurationOf, proposalSchema, applyConfigurationOperations } from "../../src/services/configuration";
-import { requirePermission } from "../../src/services/workspaceDomain";
+import { applicableWorkflows, requirePermission } from "../../src/services/workspaceDomain";
 import { analyzeBusiness, generateArchitectureOptions, generateWorkspace, interpretCommand } from "../../src/services/aiEngine";
 import { answerOperator } from "../../src/services/operatorEngine";
 import type { Workspace } from "../../src/types";
@@ -64,9 +64,10 @@ export default async function handler(request: Request): Promise<Response> {
         if (body.command.type === "saveRecord") {
           const command = body.command, previous = current.entities.find(entity => entity.id === command.entityId)?.records.find(record => record.id === command.record.id);
           const saved = updated.entities.find(entity => entity.id === command.entityId)!.records.find(record => record.id === command.record.id)!;
-          await tx`INSERT INTO workflow_events(organization_id,actor_id,entity_id,record_id,record,previous_record) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,${command.entityId},${saved.id},${tx.json(saved as never)},${previous ? tx.json(previous as never) : null})`;
+          const entity = updated.entities.find(entity => entity.id === command.entityId)!;
+          if (applicableWorkflows(updated, entity, saved, previous).length) await tx`INSERT INTO workflow_events(organization_id,actor_id,entity_id,record_id,record,previous_record) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,${command.entityId},${saved.id},${tx.json(saved as never)},${previous ? tx.json(previous as never) : null})`;
         }
-        if(body.command.type==="smartEntry"&&!current.appliedEntries?.includes(body.command.proposal.id))for(const operation of body.command.proposal.operations){const previous=current.entities.find(e=>e.id===operation.entityId)?.records.find(r=>r.id===operation.record.id),saved=updated.entities.find(e=>e.id===operation.entityId)!.records.find(r=>r.id===operation.record.id)!;await tx`INSERT INTO workflow_events(organization_id,actor_id,entity_id,record_id,record,previous_record) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,${operation.entityId},${saved.id},${tx.json(saved as never)},${previous?tx.json(previous as never):null})`}
+        if(body.command.type==="smartEntry"&&!current.appliedEntries?.includes(body.command.proposal.id))for(const operation of body.command.proposal.operations){const previous=current.entities.find(e=>e.id===operation.entityId)?.records.find(r=>r.id===operation.record.id),entity=updated.entities.find(e=>e.id===operation.entityId)!,saved=entity.records.find(r=>r.id===operation.record.id)!;if(applicableWorkflows(updated,entity,saved,previous).length)await tx`INSERT INTO workflow_events(organization_id,actor_id,entity_id,record_id,record,previous_record) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,${operation.entityId},${saved.id},${tx.json(saved as never)},${previous?tx.json(previous as never):null})`}
         await tx`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,${body.command.type},${tx.json({ revision: updated.revision } as never)})`;
         await tx`INSERT INTO action_receipts(organization_id,request_id,request_hash,response) VALUES(${principal.organizationId}::uuid,${body.requestId}::uuid,${hash},${tx.json(updated as never)})`;
         return updated;
