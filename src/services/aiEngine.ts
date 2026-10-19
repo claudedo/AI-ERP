@@ -76,7 +76,7 @@ export function analyzeBusiness(description: string, confirmedIndustry?: string)
     process: p.process,
     branches: p.branches,
     insight:
-      "Your core process crosses multiple teams, but the information currently lives in disconnected tools.",
+      "Il processo principale attraversa più team, ma oggi le informazioni sono sparse in strumenti scollegati.",
   };
 }
 export function generateArchitectureOptions(a: Analysis): ArchitectureOption[] {
@@ -84,30 +84,30 @@ export function generateArchitectureOptions(a: Analysis): ArchitectureOption[] {
   return [
     {
       id: "simple",
-      label: "Option A",
-      title: "Simple",
-      description: "A focused system for essential records and daily work.",
+      label: "Opzione A",
+      title: "Essenziale",
+      description: "Un sistema mirato per i dati essenziali e il lavoro quotidiano.",
       modules: full.slice(0, 4),
-      advantages: ["Fast adoption", "Low maintenance"],
+      advantages: ["Adozione rapida", "Manutenzione minima"],
       complexity: 1,
     },
     {
       id: "process",
-      label: "Option B",
-      title: "Process-based",
-      description: "Organized around the way work moves between teams.",
+      label: "Opzione B",
+      title: "Per processi",
+      description: "Organizzato attorno al modo in cui il lavoro passa tra i team.",
       modules: a.process,
-      advantages: ["Clear ownership", "Better handoffs"],
+      advantages: ["Responsabilità chiare", "Passaggi più fluidi"],
       complexity: 2,
     },
     {
       id: "advanced",
-      label: "Option C",
-      title: "Advanced",
+      label: "Opzione C",
+      title: "Avanzata",
       description:
-        "A connected operating system with analytics and automation.",
+        "Un sistema operativo connesso, con analisi e automazioni.",
       modules: full,
-      advantages: ["End-to-end visibility", "Built to scale"],
+      advantages: ["Visibilità completa", "Pronto a crescere"],
       complexity: 3,
     },
   ];

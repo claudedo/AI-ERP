@@ -10,28 +10,29 @@ import {
 import type { Analysis, ArchitectureOption } from "../types";
 import { NodusLogo } from "../components/NodusLogo";
 
+// Each example must match exactly one sector profile in aiEngine (Italian terms).
 const examples = {
-  "Fashion company":
-    "We are a fashion company creating two collections per year. We manage products, suppliers, production, wholesale orders and deliveries, mostly in spreadsheets.",
-  "Real estate agency":
-    "We are a real estate agency. We manage properties, owners, leads, appointments, offers and contracts across several disconnected tools.",
-  "Consulting company":
-    "We are a consulting company with 30 people. We manage clients, opportunities, projects, tasks, timesheets and billing.",
+  "Azienda di moda":
+    "Siamo un'azienda di moda che crea due collezioni l'anno. Gestiamo prodotti, fornitori, produzione, ordini wholesale e consegne, soprattutto su fogli di calcolo.",
+  "Agenzia immobiliare":
+    "Siamo un'agenzia immobiliare. Gestiamo immobili, proprietari, potenziali clienti, appuntamenti, offerte e contratti su strumenti diversi e scollegati.",
+  "Società di consulenza":
+    "Siamo una società di consulenza con 30 persone. Gestiamo clienti, opportunità, progetti, attività, timesheet e fatturazione.",
 };
 const analysisSteps = [
-  "Understanding your business",
-  "Mapping processes",
-  "Identifying entities",
-  "Designing workflows",
-  "Finding automation opportunities",
+  "Comprensione dell'attività",
+  "Mappatura dei processi",
+  "Individuazione delle entità",
+  "Progettazione dei flussi",
+  "Ricerca di automazioni possibili",
 ];
 const buildSteps = [
-  "Creating data model",
-  "Creating relationships",
-  "Generating views",
-  "Building dashboard",
-  "Configuring workflows",
-  "Setting permissions",
+  "Creazione del modello dati",
+  "Creazione delle relazioni",
+  "Generazione delle viste",
+  "Costruzione della dashboard",
+  "Configurazione dei flussi",
+  "Impostazione dei permessi",
 ];
 
 export function Builder({
@@ -100,7 +101,7 @@ export function Builder({
         </div>
         <div className="builder-progress">
           <span className={stage !== "discovery" ? "done" : "active"}>
-            01 Discover
+            01 Scopri
           </span>
           <i />
           <span
@@ -110,10 +111,10 @@ export function Builder({
                 : ""
             }
           >
-            02 Design
+            02 Progetta
           </span>
           <i />
-          <span className={stage === "building" ? "active" : ""}>03 Build</span>
+          <span className={stage === "building" ? "active" : ""}>03 Crea</span>
         </div>
         <div />
       </header>
@@ -126,7 +127,7 @@ export function Builder({
       {stage === "discovery" && (
         <section className="discovery panel-page">
           <button className="back" onClick={onBackToLanding}>
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={16} /> Indietro
           </button>
           <div className="ai-label">
             <span>
@@ -134,19 +135,19 @@ export function Builder({
             </span>
             NODUS ARCHITECT
           </div>
-          <h2>Tell me how your company works.</h2>
+          <h2>Raccontami come funziona la tua azienda.</h2>
           <p>
-            Describe your team, what you manage, and where your current process
-            gets difficult.
+            Descrivi il team, cosa gestite e dove il processo attuale si
+            complica.
           </p>
           <textarea
             aria-label="Descrizione aziendale"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="We are a furniture company with 25 employees. We manage customers, quotes, orders..."
+            placeholder="Siamo un mobilificio con 25 dipendenti. Gestiamo clienti, preventivi, ordini..."
           />
           <div className="example-row">
-            <span>Try an example</span>
+            <span>Prova un esempio</span>
             {Object.entries(examples).map(([k, v]) => (
               <button key={k} onClick={() => setDescription(v)}>
                 {k}
@@ -179,18 +180,18 @@ export function Builder({
             className="primary continue"
             onClick={() => onSubmit(description)}
           >
-            Analyze my business <ArrowRight size={17} />
+            Analizza la mia azienda <ArrowRight size={17} />
           </button>
           <div className="privacy">
-            Your description is used only to configure this demo workspace. La
+            La descrizione serve solo a configurare questo workspace demo. La
             bozza è conservata in questo browser.
           </div>
         </section>
       )}
       {stage === "analysis" && (
         <LoadingView
-          title="Understanding your business"
-          subtitle="The architect is mapping your company into a flexible operating model."
+          title="Analisi della tua azienda"
+          subtitle="NODUS Architect sta trasformando la descrizione in un modello operativo flessibile."
           steps={analysisSteps}
           progress={progress}
         />
@@ -198,7 +199,7 @@ export function Builder({
       {stage === "architect" && analysis && (
         <section className="architecture panel-page wide">
           <button className="back" onClick={onBack}>
-            <ArrowLeft size={16} /> Edit description
+            <ArrowLeft size={16} /> Modifica descrizione
           </button>
           <div className="split-title">
             <div>
@@ -206,12 +207,12 @@ export function Builder({
                 <span>
                   <NodusLogo variant="mark" />
                 </span>
-                BUSINESS MAP
+                MAPPA DELL’AZIENDA
               </div>
-              <h2>Three ways to structure your workspace.</h2>
+              <h2>Tre modi per strutturare il tuo workspace.</h2>
               <p>
-                Each model supports the same business. Choose the level of
-                detail that fits your team today.
+                Ogni modello supporta la stessa attività. Scegli il livello di
+                dettaglio adatto al tuo team oggi.
               </p>
             </div>
             <ProcessMap analysis={analysis} />
@@ -247,7 +248,7 @@ export function Builder({
                   ))}
                 </ul>
                 <div className="complexity">
-                  <span>Complexity</span>
+                  <span>Complessità</span>
                   <div>
                     {[1, 2, 3].map((n) => (
                       <i
@@ -265,7 +266,7 @@ export function Builder({
             className="primary continue"
             onClick={onContinue}
           >
-            Continue with {selected?.title || "selected structure"}{" "}
+            Continua con {selected?.title || "la struttura scelta"}{" "}
             <ArrowRight size={17} />
           </button>
         </section>
@@ -273,15 +274,15 @@ export function Builder({
       {stage === "suggestions" && (
         <section className="suggestions panel-page">
           <button className="back" onClick={onBackToArchitect}>
-            <ArrowLeft size={16} /> Architecture
+            <ArrowLeft size={16} /> Architettura
           </button>
           <div className="ai-label">
             <span>
               <NodusLogo variant="mark" />
             </span>
-            NODUS RECOMMENDATIONS
+            SUGGERIMENTI NODUS
           </div>
-          <h2>Two improvements before we build.</h2>
+          <h2>Due miglioramenti prima di creare il workspace.</h2>
           <p>
             Suggerimenti coerenti con i moduli scelti. Le automazioni della demo
             sono eseguite in questo browser.
@@ -304,10 +305,10 @@ export function Builder({
             >
               {automation ? (
                 <>
-                  <Check size={15} /> Added
+                  <Check size={15} /> Aggiunta
                 </>
               ) : (
-                "Add automation"
+                "Aggiungi automazione"
               )}
             </button>
           </div>
@@ -316,26 +317,26 @@ export function Builder({
               <Database />
             </div>
             <div>
-              <span className="suggestion-type">Data structure suggestion</span>
-              <h3>Separate companies, contacts and locations</h3>
+              <span className="suggestion-type">Struttura dati consigliata</span>
+              <h3>Aziende, contatti e sedi separati</h3>
               <p>
                 Una sola azienda può essere cliente e fornitore, con più
                 contatti e sedi collegati.
               </p>
             </div>
             <span className="added">
-              <Check size={15} /> Recommended
+              <Check size={15} /> Consigliato
             </span>
           </div>
           <button className="primary continue" onClick={onBuild}>
-            Build my workspace <ArrowRight size={17} />
+            Crea il mio workspace <ArrowRight size={17} />
           </button>
         </section>
       )}
       {stage === "building" && (
         <LoadingView
-          title="Building your workspace"
-          subtitle="Turning the selected architecture into a working management system."
+          title="Creazione del workspace"
+          subtitle="Sto trasformando l’architettura scelta in un gestionale funzionante."
           steps={buildSteps}
           progress={progress}
         />

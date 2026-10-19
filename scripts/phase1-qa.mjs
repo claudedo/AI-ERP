@@ -83,14 +83,14 @@ try {
   }
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await test("analysis → restart invalidates timer", async () => {
-    await load(null, ""); await click("Design your workspace"); await until("!!document.querySelector('textarea')");
-    await input("textarea", "We run a real estate agency managing properties and owners.", true); await click("Analyze my business"); await until("!!document.querySelector('.loading-view')"); await click("Ricomincia"); await pause(3700);
+    await load(null, ""); await click("Progetta il tuo workspace"); await until("!!document.querySelector('textarea')");
+    await input("textarea", "We run a real estate agency managing properties and owners.", true); await click("Analizza la mia azienda"); await until("!!document.querySelector('.loading-view')"); await click("Ricomincia"); await pause(3700);
     assert(await evaluate("!!document.querySelector('.discovery')"), "Previous analysis timer replaced restart");
   });
   await test("build → restart never saves an obsolete workspace", async () => {
-    await load(null, ""); await click("Design your workspace"); await until("!!document.querySelector('textarea')");
-    await input("textarea", "We run a real estate agency managing properties and owners.", true); await click("Analyze my business"); await until("!!document.querySelector('.architecture-card')");
-    await evaluate("document.querySelector('.architecture-card').click()"); await click("Continue with"); await click("Build"); await click("Ricomincia"); await pause(3600);
+    await load(null, ""); await click("Progetta il tuo workspace"); await until("!!document.querySelector('textarea')");
+    await input("textarea", "We run a real estate agency managing properties and owners.", true); await click("Analizza la mia azienda"); await until("!!document.querySelector('.architecture-card')");
+    await evaluate("document.querySelector('.architecture-card').click()"); await click("Continua con"); await click("Crea il mio workspace"); await click("Ricomincia"); await pause(3600);
     assert.equal(await evaluate("!!localStorage.getItem('ai-business-os-workspace')"), false);
     assert(await evaluate("!!document.querySelector('.discovery')"));
   });

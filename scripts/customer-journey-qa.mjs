@@ -114,12 +114,12 @@ try {
   }
   if (mode === "onboarding") {
     check("landing local disclosure", (await text()).includes("regole locali"));
-    await click("Create workspace");
+    await click("Crea workspace");
     await fill(
       "textarea",
       "Siamo una società di consulenza con clienti, progetti, preventivi, fatture, scadenze e ore lavorate",
     );
-    await click("Analyze my business");
+    await click("Analizza la mia azienda");
     await wait(3600);
     check(
       "Italian consulting architecture",
@@ -131,7 +131,7 @@ try {
       '[...document.querySelectorAll("button")].find(b=>b.innerText.includes("OPTION C")).click()',
     );
     await wait(100);
-    await click("Continue with Advanced");
+    await click("Continua con Avanzata");
     check(
       "consulting recommendation has no inventory",
       !(await text()).includes("inventory"),
@@ -141,8 +141,8 @@ try {
       "recommendations survive refresh",
       (await text()).includes("NODUS RECOMMENDATIONS"),
     );
-    await click("Architecture");
-    await click("Edit description");
+    await click("Architettura");
+    await click("Modifica descrizione");
     check(
       "description retained",
       (await ev('document.querySelector("textarea").value')).includes(
@@ -153,31 +153,31 @@ try {
       "textarea",
       "Siamo un team con processi molto diversi e vorremmo un gestionale",
     );
-    await click("Analyze my business");
+    await click("Analizza la mia azienda");
     check(
       "ambiguous sector requests confirmation",
       (await text()).includes("Conferma prima"),
     );
     await field("Il settore", "fashion");
-    await click("Analyze my business");
+    await click("Analizza la mia azienda");
     await wait(3600);
     check(
       "confirmed fashion architecture",
       (await text()).includes("Collections"),
     );
-    await click("Edit description");
+    await click("Modifica descrizione");
     await fill(
       "textarea",
       "Siamo una società di consulenza con clienti, progetti, fatture e ore lavorate",
     );
-    await click("Analyze my business");
+    await click("Analizza la mia azienda");
     await wait(3600);
     await ev(
       '[...document.querySelectorAll("button")].find(b=>b.innerText.includes("OPTION C")).click()',
     );
     await wait(100);
-    await click("Continue with Advanced");
-    await click("Build my workspace");
+    await click("Continua con Avanzata");
+    await click("Crea il mio workspace");
     await wait(3600);
     check(
       "one company module",

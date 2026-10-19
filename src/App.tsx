@@ -28,7 +28,7 @@ type Stage =
   | "building"
   | "workspace";
 export default function App() {
-  return <NavigationGuardProvider><Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Loading NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
+  return <NavigationGuardProvider><Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Caricamento di NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
 }
 
 function Application() {
@@ -215,7 +215,7 @@ function Application() {
             routeTo("connected");
           }}
         >
-          Connected workspace
+          Workspace condiviso
         </button>
       </>
     );
