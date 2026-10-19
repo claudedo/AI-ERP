@@ -1,7 +1,7 @@
 import { chatRequestSchema } from "../../src/ai/chatContract";
 import { contextWorkspace, selectChatContext } from "../../src/ai/chatContext";
 import { localChat } from "../../src/ai/localChat";
-import { openaiChat, ProviderUnavailable } from "../../server/openaiChat";
+import { activeProvider, openaiChat, ProviderUnavailable } from "../../server/openaiChat";
 import { ChatRateLimit } from "../../server/chatRateLimit";
 import { authenticate, database, HttpError, respond, withMembers } from "../../server/platform";
 import type { Workspace } from "../../src/types";
@@ -13,7 +13,8 @@ const limiter = new ChatRateLimit();
 export const config = { rateLimit: { windowLimit: 10, windowSize: 60, aggregateBy: ["ip", "domain"] } };
 const unavailable = { error: "NODUS AI non è temporaneamente disponibile. Puoi riprovare o usare la modalità locale." };
 export default async function handler(request: Request, netlify: { ip?: string } = {}): Promise<Response> {
-  if (request.method === "GET") return respond({ service: "NODUS AI", configured: !!process.env.OPENAI_API_KEY, sharedQuotaConfigured: !!process.env.DATABASE_URL });
+  // Public status: which provider is configured, never any key value.
+  if (request.method === "GET") return respond({ service: "NODUS AI", configured: !!activeProvider(), provider: activeProvider(), sharedQuotaConfigured: !!process.env.DATABASE_URL });
   if (request.method !== "POST") return respond(unavailable, 405);
   // Browser same-origin only; no permissive CORS. This is not a substitute for authentication.
   const origin = request.headers.get("origin"), expected = new URL(request.url).origin;
@@ -46,7 +47,10 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const target = workspace || contextWorkspace(context);
     const guarded = paymentGuard(body.message, target);
     if (guarded) return respond(guarded);
-    const reservation = process.env.OPENAI_API_KEY ? await reserveChatQuota(quotaClient) : null;
+    // Groq's free tier costs nothing (its own rate limits apply), so no paid-call quota is needed;
+    // paid OpenAI calls still require the shared quota (fail closed).
+    const provider = activeProvider();
+    const reservation = provider === "groq" ? { refund: async () => {} } : provider === "openai" ? await reserveChatQuota(quotaClient) : null;
     if (!reservation) return respond(await localChat(body.message, target, body.contextId));
     try { return respond(await openaiChat(body, context, workspace)); }
     catch (error) {

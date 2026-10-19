@@ -10,6 +10,12 @@ Unica chat in italiano, con le stesse palette, icone e componenti del prodotto. 
 
 La Function non modifica dati. Il modello restituisce un envelope JSON rigoroso, validato con Zod, convertito nelle tipologie `answer`, `query_results`, `entry_proposal`, `update_proposal`, `structure_proposal`, `clarification`, `unsupported`. Le proposte dati attraversano `entrySchema`, permessi, controllo revisione e `applyEntry`; la preview è modificabile e il salvataggio è possibile solo tramite **Conferma**. Le proposte strutturali richiedono una richiesta esplicita di un Admin: Conferma passa da stage/publish e dalle validazioni esistenti.
 
+## Fornitore gratuito: Groq
+
+Se su Netlify è impostata `GROQ_API_KEY` (scope **Functions**, mai `VITE_`), la chat usa Groq invece di OpenAI: API compatibile OpenAI (Chat Completions) con lo stesso envelope JSON rigoroso (`json_schema` strict) e le stesse validazioni Zod e di dominio. Modello predefinito `openai/gpt-oss-120b`, modificabile con `GROQ_MODEL`; `NODUS_AI_PROVIDER=openai|groq` forza il fornitore.
+
+Il piano gratuito non ha costi, quindi non richiede la quota condivisa né `DATABASE_URL`: valgono i limiti di Groq (richieste e token al minuto/giorno, visibili nella console Groq). Superati i limiti o in caso di errore, la chat torna alla modalità locale senza scrivere dati. Per stare nei limiti viene inviato un campione ridotto di record (lo schema completo resta). Verificare nella console Groq i limiti effettivi e nella loro documentazione la politica sull'uso dei dati inviati. Dopo aver aggiunto o cambiato la variabile su Netlify serve un nuovo deploy. `GET /.netlify/functions/nodus-ai` mostra `provider` senza esporre chiavi.
+
 ## Contesto minimo e consultazioni
 
 Invio limitato a messaggio (6000 caratteri), massimo 6 turni abbreviati (12000 caratteri complessivi), schema, ruolo/permessi e massimo 40 record selezionati (massimo 12 per entità). Aziende, contatti, sedi, documenti, immobili e altri moduli vengono individuati nello schema, senza aggiungerli automaticamente. Il selettore privilegia i riferimenti presenti nella richiesta e un livello di relazioni. Password, token, IBAN e dettagli legacy sono esclusi; email/telefoni/dati fiscali non necessari sono omessi. Il contesto è limitato a 60000 caratteri; i record sono dichiarati parziali al modello. Nessun database completo è inviato indiscriminatamente. `store: false` disabilita lo storage applicativo Responses; non equivale a una garanzia di zero retention del provider.
