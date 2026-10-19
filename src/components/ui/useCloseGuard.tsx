@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertDialog } from "radix-ui";
+import { useNavigationBoundary } from "./NavigationGuard";
 
 export function useCloseGuard(
   dirty: boolean,
   close: () => void,
-  save?: () => void | Promise<void>,
+  save?: () => void | boolean | Promise<void | boolean>,
 ) {
   const [asking, setAsking] = useState(false);
   const [trigger] = useState(() =>
@@ -13,6 +14,17 @@ export function useCloseGuard(
       : null,
   );
   const bypass = useRef(false);
+  const pendingNavigation = useRef<(() => void) | null>(null);
+  const boundary = useNavigationBoundary();
+  const [id] = useState(() => Symbol("editor"));
+  const current = useRef({ dirty, save });
+  current.current = { dirty, save };
+  useEffect(() => boundary?.register(id, resume => {
+    if (!current.current.dirty || bypass.current) return false;
+    pendingNavigation.current = resume;
+    setAsking(true);
+    return true;
+  }), [boundary?.register, id]);
   useEffect(() => {
     const before = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -26,6 +38,9 @@ export function useCloseGuard(
   const finish = () => {
     bypass.current = true;
     close();
+    const resume = pendingNavigation.current;
+    pendingNavigation.current = null;
+    if (resume) { resume(); return; }
     window.setTimeout(() => {
       const target =
         trigger?.isConnected && trigger.tagName !== "BODY"
@@ -45,7 +60,15 @@ export function useCloseGuard(
     else finish();
   };
   const confirmation = (
-    <AlertDialog.Root open={asking} onOpenChange={setAsking}>
+    <AlertDialog.Root
+      open={asking}
+      onOpenChange={(open) => {
+        // Escape/overlay/"Continua" dismissals cancel the blocked navigation;
+        // Discard and Save close programmatically and keep it pending.
+        if (!open) pendingNavigation.current = null;
+        setAsking(open);
+      }}
+    >
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="alert-overlay" />
         <AlertDialog.Content className="confirm-box">
@@ -69,9 +92,12 @@ export function useCloseGuard(
             {save && (
               <button
                 className="primary"
-                onClick={() => {
+                onClick={async () => {
                   setAsking(false);
-                  void save();
+                  try {
+                    const result = await save();
+                    if (result === false) pendingNavigation.current = null;
+                  } catch { pendingNavigation.current = null; }
                 }}
               >
                 Salva

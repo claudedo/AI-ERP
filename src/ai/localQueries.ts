@@ -34,6 +34,27 @@ export function localQuery(message: string, workspace: Workspace, contextId?: st
   const numeric = entity.fields.filter(f => f.type === "currency");
   const sum = /\bsomma\b|totale.*(?:importo|valore)|quanto.*(?:incass|euro)/.test(text);
   if (sum && numeric.length !== 1) return clarify(`Quale campo importo di ${entity.name} vuoi sommare?`);
+  // Fail closed: the local engine supports a small grammar, not arbitrary NL.
+  // Remove only clauses we actually translated. Any remaining content may be
+  // a location, comparison, negation or date restriction and must not disappear.
+  const removePhrase = (source: string, phrase: string) => {
+    const words = normalize(phrase).replace(/[^a-z0-9]+/g, " ").trim();
+    if (!words) return source;
+    const escaped = words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return source.replace(new RegExp(`(^| )${escaped}(?= |$)`, "g"), " ");
+  };
+  let residual = text.replace(/[^a-z0-9]+/g, " ");
+  for (const term of terms(entity).sort((a,b) => b.length - a.length)) residual = removePhrase(residual, term);
+  for (const { option } of selected) residual = removePhrase(residual, option);
+  for (const group of statusGroups) if (selected.some(({ option }) => group.test(normalize(option)))) {
+    residual = residual.replace(new RegExp(`\\b(?:${group.source})[a-z]*\\b`, "g"), " ");
+  }
+  if (filters.some(f => f.operator === "this-month")) for (const phrase of ["questo mese", "mese corrente", "this month"]) residual = removePhrase(residual, phrase);
+  // Structural words, not filter values. Deliberately do NOT remove non/not,
+  // location names, numbers, comparisons or unhandled temporal expressions.
+  residual = residual.replace(/\b(?:quanti|quante|quali|quanto|quale|mostra|mostrami|elenca|totale|somma|show|list|count|record|records|i|le|gli|il|la|lo|l|un|una|di|dei|delle|degli|del|della|dello|dell|abbiamo|sono|ci|in|con|stato|fase|nel|nella|al|alla|a|per|the|of|all|with|status|we|have|do|how|many)\b/g, " ").trim();
+  if (sum) residual = residual.replace(/\b(?:importo|valore|incass[a-z]*|euro)\b/g, " ").trim();
+  if (residual.trim()) return clarify(`Non riesco a interpretare tutte le condizioni di questa richiesta su ${entity.name}. Specifica i filtri con i nomi e i valori dei campi; non mostrerò un totale che li ignora.`);
   const query: ChatQuery = { entityId: entity.id, filters, metric: sum ? "sum" : "count", fieldId: sum ? numeric[0].id : null, groupBy: null };
   executeChatQuery(workspace, query);
   return { type: "query_results", source: "local", message: `Consultazione di ${entity.name}: risultati calcolati dal gestionale.`, query };

@@ -1,8 +1,8 @@
 import { DomainError } from "./workspaceDomain";
+import { attachmentPresentation, validateAttachmentUpload } from "./attachmentPolicy";
 
 const DB_NAME = "nodus-attachments";
 const STORE = "files";
-const MAX_FILE = 10 * 1024 * 1024;
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!globalThis.indexedDB) { reject(new DomainError("This browser does not support local file storage.")); return; }
@@ -24,7 +24,7 @@ async function transact<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore
   });
 }
 export async function saveAttachmentBlob(id: string, file: File) {
-  if (file.size > MAX_FILE) throw new DomainError("Attachments must be 10 MB or smaller.");
+  validateAttachmentUpload(file);
   await transact<void>("readwrite", store => { store.put(file, id); });
 }
 export async function readAttachmentBlob(id: string): Promise<Blob> {
@@ -34,8 +34,11 @@ export async function readAttachmentBlob(id: string): Promise<Blob> {
 }
 export async function removeAttachmentBlob(id: string) { await transact<void>("readwrite", store => { store.delete(id); }); }
 export async function openAttachment(id: string, filename: string, download = false) {
-  const blob = await readAttachmentBlob(id), url = URL.createObjectURL(blob);
-  const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer";
-  if (download) link.download = filename;
+  const stored = await readAttachmentBlob(id);
+  const presentation = await attachmentPresentation(stored, filename, download);
+  const url = URL.createObjectURL(presentation.blob);
+  const link = document.createElement("a"); link.href = url; link.rel = "noopener noreferrer";
+  if (presentation.download) link.download = filename || "allegato";
+  else link.target = "_blank";
   link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

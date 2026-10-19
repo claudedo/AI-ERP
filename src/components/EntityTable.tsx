@@ -41,6 +41,7 @@ export function EntityTable({
   workspace,
   initialSearch = "",
   initialRecordId = "",
+  recordOpenRequest = 0,
   canEdit,
   canDelete,
   delayedOnly,
@@ -61,6 +62,7 @@ export function EntityTable({
   workspace: Workspace;
   initialSearch?: string;
   initialRecordId?: string;
+  recordOpenRequest?: number;
   canEdit: boolean;
   canDelete: boolean;
   delayedOnly: boolean;
@@ -112,7 +114,7 @@ export function EntityTable({
   useEffect(() => {
     if (initialRecordId)
       setDrawer(entity.records.find((r) => r.id === initialRecordId));
-  }, [initialRecordId]);
+  }, [initialRecordId, recordOpenRequest]);
   const [savingView, setSavingView] = useState(false);
   const [viewName, setViewName] = useState("");
   const [activeView, setActiveView] = useState("");
@@ -164,10 +166,10 @@ export function EntityTable({
     setHiddenColumns(
       entity.fields.filter((f) => !v.columns.includes(f.id)).map((f) => f.id),
     );
-    setStatusFilter(
-      String(v.filters.find((f) => f.fieldId === statusField?.id)?.value || ""),
-    );
-    setExtraFilters(v.filters.filter((f) => f.fieldId !== statusField?.id));
+    // A saved filter is lossless: the quick status control must not rewrite
+    // operators or consume multiple conditions on the same field.
+    setStatusFilter("");
+    setExtraFilters(structuredClone(v.filters));
     setLayout(v.layout || "table");
     setSort(v.sort);
   };

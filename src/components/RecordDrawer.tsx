@@ -72,7 +72,7 @@ export function RecordDrawer({
     setErrors((current) => ({ ...current, [id]: "" }));
   };
   const save = async () => {
-    if (savingRef.current) return;
+    if (savingRef.current) return false;
     savingRef.current = true;
     setSaving(true);
     try {
@@ -84,12 +84,16 @@ export function RecordDrawer({
       if (
         Object.keys(next).length === 0 &&
         (await onSave(calculated)) !== false
-      )
+      ) {
         guard.finish();
+        return true;
+      }
+      return false;
     } catch (error) {
       setErrors({
         form: error instanceof Error ? error.message : "Calculation failed.",
       });
+      return false;
     } finally {
       savingRef.current = false;
       setSaving(false);

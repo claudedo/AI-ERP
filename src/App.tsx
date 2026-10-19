@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { NavigationGuardProvider } from "./components/ui/NavigationGuard";
 import { loadOnboarding, ONBOARDING_KEY } from "./services/onboarding";
 import { upgradeCompanies } from "./services/companies";
 import { routeTo } from "./hooks/useWorkspaceRoute";
@@ -27,7 +28,7 @@ type Stage =
   | "building"
   | "workspace";
 export default function App() {
-  return <Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Loading NODUS…</main>}><Application /></Suspense>;
+  return <NavigationGuardProvider><Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Loading NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
 }
 
 function Application() {
@@ -54,8 +55,20 @@ function Application() {
       location.hash === "#connected" ||
       new URLSearchParams(location.search).get("mode") === "connected",
   );
+  const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generation = useRef(0);
+  const cancelTransition = () => {
+    generation.current++;
+    if (transition.current !== null) window.clearTimeout(transition.current);
+    transition.current = null;
+  };
+  const leaveStep = (next: Stage) => { cancelTransition(); setStage(next); };
+  useEffect(() => () => cancelTransition(), []);
   useEffect(() => {
     const update = () => {
+      // Only a workspace route supersedes onboarding; otherwise a pending
+      // analysis/build timer must still advance the loading stage.
+      if (workspace) cancelTransition();
       setVisualBuilder(location.hash === "#builder");
       setConnected(location.hash === "#connected");
       if (workspace) setStage("workspace");
@@ -87,6 +100,7 @@ function Application() {
     }
   }, [workspace, description, analysis, selected, automation, stage, sector]);
   const restart = () => {
+    cancelTransition();
     localStorage.removeItem(ONBOARDING_KEY);
     setDescription("");
     setSector("");
@@ -97,17 +111,22 @@ function Application() {
   };
 
   const begin = (description: string) => {
+    cancelTransition();
     const result = analyzeBusiness(description, sector || undefined);
     setAnalysis(result);
     setSelected(null);
     if (result.needsConfirmation) return;
     setStage("analysis");
-    window.setTimeout(() => setStage("architect"), 3400);
+    const token = generation.current;
+    transition.current = window.setTimeout(() => { if (token === generation.current) setStage("architect"); }, 3400);
   };
   const build = () => {
     if (!analysis || !selected) return;
+    cancelTransition();
+    const token = generation.current;
     setStage("building");
-    window.setTimeout(() => {
+    transition.current = window.setTimeout(() => {
+      if (token !== generation.current) return;
       const next = generateWorkspace(analysis, selected);
       next.workflows = [];
       const source = next.entities.find(
@@ -187,10 +206,11 @@ function Application() {
   if (stage === "landing")
     return (
       <>
-        <Landing onStart={() => setStage("discovery")} />
+        <Landing onStart={() => leaveStep("discovery")} />
         <button
           className="secondary connected-entry"
           onClick={() => {
+            cancelTransition();
             setConnected(true);
             routeTo("connected");
           }}
@@ -239,6 +259,7 @@ function Application() {
       stage={stage}
       description={description}
       onDescriptionChange={(value) => {
+        cancelTransition();
         setDescription(value);
         setSector("");
         setAnalysis(null);
@@ -255,11 +276,11 @@ function Application() {
       onAutomationChange={setAutomation}
       onSubmit={begin}
       onSelect={setSelected}
-      onContinue={() => setStage("suggestions")}
+      onContinue={() => leaveStep("suggestions")}
       onBuild={build}
-      onBack={() => setStage("discovery")}
-      onBackToLanding={() => setStage("landing")}
-      onBackToArchitect={() => setStage("architect")}
+      onBack={() => leaveStep("discovery")}
+      onBackToLanding={() => leaveStep("landing")}
+      onBackToArchitect={() => leaveStep("architect")}
     />
   );
 }

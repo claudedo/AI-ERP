@@ -31,6 +31,7 @@ import { UsersRolesPage } from "../components/UsersRolesPage";
 import { AssistantPanel } from "../components/AssistantPanel";
 import { Hint } from "../components/ui/Hint";
 import { NodusLogo } from "../components/NodusLogo";
+import { useGuardedNavigation } from "../components/ui/NavigationGuard";
 import { recordLabel } from "../components/RecordDrawer";
 import { ImportWizard } from "../components/ImportWizard";
 import { CommandPalette } from "../components/CommandPalette";
@@ -126,7 +127,11 @@ export function WorkspaceApp({
     [confirmReset, setConfirmReset] = useState(false),
     [importOpen, setImportOpen] = useState(false),
     [paletteOpen, setPaletteOpen] = useState(false),
-    [targetRecord, setTargetRecord] = useState("");
+    [targetRecord, setTargetRecord] = useState(""),
+    // Re-opening the same record (e.g. twice from chat) must reopen its drawer.
+    [recordOpenRequest, setRecordOpenRequest] = useState(0);
+  // Record jumps (related links, search, chat, notifications) ask any dirty editor first.
+  const guardedNavigate = useGuardedNavigation();
   const searchRef = useRef<HTMLInputElement>(null),
     menuButtonRef = useRef<HTMLButtonElement>(null),
     closeNavRef = useRef<HTMLButtonElement>(null);
@@ -148,6 +153,7 @@ export function WorkspaceApp({
       workspace.alerts.length;
   const searchResults = globalQuery.trim()
     ? workspace.entities
+        .filter((e) => !e.archived)
         .flatMap((e) =>
           e.records
             .filter((r) =>
@@ -305,17 +311,19 @@ export function WorkspaceApp({
     setTableSearch("");
     setTargetRecord("");
   };
-  const goRecord = (id: string, recordId: string) => {
-    go(id);
-    setTargetRecord(recordId);
-  };
-  const openSearchResult = (id: string) => {
-    const query = globalQuery.trim();
-    go(id);
-    setTableSearch(query);
-    setGlobalQuery("");
-    searchRef.current?.blur();
-  };
+  const goRecord = (id: string, recordId: string, after?: () => void) =>
+    guardedNavigate(() => {
+      go(id);
+      setTargetRecord(recordId);
+      setRecordOpenRequest((n) => n + 1);
+      after?.();
+    });
+  const openSearchResult = (id: string, recordId: string) =>
+    // Keep the query if a dirty editor cancels the jump.
+    goRecord(id, recordId, () => {
+      setGlobalQuery("");
+      searchRef.current?.blur();
+    });
   const switchUser = (id: string) => {
     setWorkspace({ ...workspace, currentUserId: id });
     notify("Demo user switched");
@@ -611,7 +619,10 @@ export function WorkspaceApp({
                 onChange={(e) => setGlobalQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && searchResults[0])
-                    openSearchResult(searchResults[0].entity.id);
+                    openSearchResult(
+                      searchResults[0].entity.id,
+                      searchResults[0].record.id,
+                    );
                   if (e.key === "Escape") setGlobalQuery("");
                 }}
                 placeholder="Search anything..."
@@ -633,7 +644,7 @@ export function WorkspaceApp({
                     searchResults.map(({ entity, record }) => (
                       <button
                         key={`${entity.id}:${record.id}`}
-                        onClick={() => openSearchResult(entity.id)}
+                        onClick={() => openSearchResult(entity.id, record.id)}
                       >
                         <strong>{recordLabel(entity, record)}</strong>
                         <span>{entity.name}</span>
@@ -794,6 +805,7 @@ export function WorkspaceApp({
               workspace={workspace}
               initialSearch={tableSearch}
               initialRecordId={targetRecord}
+              recordOpenRequest={recordOpenRequest}
               canEdit={permissions.editRecords}
               canDelete={permissions.deleteRecords}
               delayedOnly={delayedOnly}
@@ -924,10 +936,11 @@ export function WorkspaceApp({
               setAssistant(false);
             }}
             setDelayedOnly={setDelayedOnly}
-            onOpenResult={(id, recordId) => {
-              goRecord(id, recordId);
-              setAssistant(false);
-            }}
+            onOpenResult={(id, recordId) =>
+              // Close only once navigation is approved, so a pending chat
+              // proposal can ask to be discarded instead of vanishing.
+              goRecord(id, recordId, () => setAssistant(false))
+            }
             onClose={() => setAssistant(false)}
             onToast={notify}
             contextId={entity?.id}

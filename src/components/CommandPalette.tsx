@@ -7,14 +7,16 @@ import { recordLabel } from "./RecordDrawer";
 export function CommandPalette({ workspace, canEdit, canBuild, onClose, onNavigate, onRecord, onAssistant, onImport }: { workspace: Workspace; canEdit: boolean; canBuild: boolean; onClose: () => void; onNavigate: (id: string) => void; onRecord: (entityId: string, recordId: string) => void; onAssistant: (mode: "operator" | "builder") => void; onImport: () => void }) {
   const [query, setQuery] = useState(""), [selected, setSelected] = useState(0);
   const commands = useMemo(() => {
+    // Archived modules keep their data but are hidden from navigation and search.
+    const active = workspace.entities.filter(entity => !entity.archived);
     const actions = [
       { id: "dashboard", label: "Dashboard", detail: "Navigate", icon: <LayoutDashboard size={15}/>, run: () => onNavigate("dashboard") },
       { id: "automations", label: "Automations", detail: "Navigate", icon: <Zap size={15}/>, run: () => onNavigate("automations") },
       { id: "approvals", label: "Approvals", detail: "Pending decisions", icon: <Zap size={15}/>, run: () => onNavigate("approvals") },
       { id: "operator", label: "NODUS AI", detail: "Domande, dati e modifiche in una chat", icon: <Search size={15}/>, run: () => onAssistant("operator") },
       ...(canEdit ? [{ id: "import", label: "Import CSV or Excel", detail: "Local data import", icon: <FileUp size={15}/>, run: onImport }] : []),
-      ...workspace.entities.map(entity => ({ id: `entity:${entity.id}`, label: entity.name, detail: `${entity.records.length} records · module`, icon: <LayoutDashboard size={15}/>, run: () => onNavigate(entity.id) })),
-      ...workspace.entities.flatMap(entity => entity.records.map(record => ({ id: `record:${entity.id}:${record.id}`, label: recordLabel(entity, record), detail: `${entity.name} · record`, icon: <Search size={15}/>, run: () => onRecord(entity.id, record.id) })))
+      ...active.map(entity => ({ id: `entity:${entity.id}`, label: entity.name, detail: `${entity.records.length} records · module`, icon: <LayoutDashboard size={15}/>, run: () => onNavigate(entity.id) })),
+      ...active.flatMap(entity => entity.records.map(record => ({ id: `record:${entity.id}:${record.id}`, label: recordLabel(entity, record), detail: `${entity.name} · record`, icon: <Search size={15}/>, run: () => onRecord(entity.id, record.id) })))
     ];
     return actions.filter(action => `${action.label} ${action.detail}`.toLowerCase().includes(query.toLowerCase())).slice(0, 20);
   }, [query, workspace, canEdit, canBuild, onNavigate, onRecord, onAssistant, onImport]);
