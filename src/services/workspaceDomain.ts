@@ -2,6 +2,8 @@ import type { Approval, AttachmentRef, DashboardWidget, DataRecord, Entity, Reco
 import { deriveAlerts } from "./aiEngine";
 import { calculateFields } from "./formulas";
 import { isCompanyEntity, normalizedVat } from "./companies";
+import { isModuleKind } from "./moduleKinds";
+import { localizeTemplateEntity } from "./realEstateLabels";
 
 export class DomainError extends Error {}
 export const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -70,9 +72,9 @@ export function workflowApplies(flow: Workflow, entity: Entity, record: DataReco
         const actual = record[config.conditionFieldId];
         shouldRun = config.conditionOperator === "greater-than" ? Number(actual) > Number(config.conditionValue) : String(actual ?? "") === String(config.conditionValue ?? "");
       }
-    } else if (flow.id === "confirmed-order-task") shouldRun = /orders/i.test(entity.name) && record.status === "Confirmed" && previous?.status !== "Confirmed";
-    else if (flow.id === "delayed-delivery-alert") shouldRun = /deliver/i.test(entity.name) && record.status === "Delayed" && previous?.status !== "Delayed";
-    else if (flow.id === "high-value-approval") shouldRun = /orders/i.test(entity.name) && valueOf(entity, record) > 20000 && (!previous || valueOf(entity, previous) <= 20000);
+    } else if (flow.id === "confirmed-order-task") shouldRun = isModuleKind(entity, "orders") && record.status === "Confirmed" && previous?.status !== "Confirmed";
+    else if (flow.id === "delayed-delivery-alert") shouldRun = isModuleKind(entity, "deliveries") && record.status === "Delayed" && previous?.status !== "Delayed";
+    else if (flow.id === "high-value-approval") shouldRun = isModuleKind(entity, "orders") && valueOf(entity, record) > 20000 && (!previous || valueOf(entity, previous) <= 20000);
   return shouldRun;
 }
 export const applicableWorkflows = (w: Workspace, entity: Entity, record: DataRecord, previous?: DataRecord) => w.workflows.filter(flow => workflowApplies(flow, entity, record, previous));
@@ -85,9 +87,9 @@ export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, p
     try {
       const action = config?.action || (flow.id === "confirmed-order-task" ? "create-task" : flow.id === "high-value-approval" ? "request-approval" : "notify");
       if (action === "create-task") {
-        let target = w.entities.find(e => e.id === config?.targetEntityId) || w.entities.find(e => e.id === "tasks" || /operations/i.test(e.name));
+        let target = w.entities.find(e => e.id === config?.targetEntityId) || w.entities.find(e => e.id === "tasks" || isModuleKind(e, "operations"));
         if (!target && !config) {
-          target = { id: "tasks", name: "Tasks", fields: [{ id: "name", name: "Task", type: "text" }, { id: "sourceRecord", name: "Source record", type: "text" }, { id: "owner", name: "Owner", type: "text" }, { id: "due", name: "Due date", type: "date" }, { id: "status", name: "Status", type: "status", options: ["To do", "In progress", "Done"] }], records: [] };
+          target = localizeTemplateEntity({ id: "tasks", name: "Tasks", fields: [{ id: "name", name: "Task", type: "text" }, { id: "sourceRecord", name: "Source record", type: "text" }, { id: "owner", name: "Owner", type: "text" }, { id: "due", name: "Due date", type: "date" }, { id: "status", name: "Status", type: "status", options: ["To do", "In progress", "Done"] }], records: [] });
           w.entities.push(target);
         }
         if (!target) throw new DomainError("Il modulo di destinazione delle attività non esiste.");
@@ -266,7 +268,7 @@ export function undoAiChange(w: Workspace, changeId: string): Workspace {
   const change = w.changeHistory.find(item => item.id === changeId);
   if (!change || change.status !== "applied" || change.appliedRevision !== (w.revision || 0)) throw new DomainError("Puoi annullare solo prima di ulteriori modifiche al workspace.");
   if (!["add-priority", "add-quality", "add-suppliers", "add-approval", "add-status", "add-view"].includes(change.action || "")) throw new DomainError("Questa modifica strutturale non può essere annullata in sicurezza.");
-  const next = structuredClone(w), order = next.entities.find(e => /orders/i.test(e.name));
+  const next = structuredClone(w), order = next.entities.find(e => isModuleKind(e, "orders"));
   if (change.action === "add-priority" && order) { order.fields = order.fields.filter(f => f.id !== "priority"); order.records.forEach(r => { delete r.priority; }); }
   if (change.action === "add-quality") { next.entities = next.entities.filter(e => e.id !== "quality-control"); next.relations = next.relations.filter(r => r.fromEntityId !== "quality-control" && r.toEntityId !== "quality-control"); }
   if (change.action === "add-suppliers") next.entities = next.entities.filter(e => e.id !== "suppliers");

@@ -1,9 +1,10 @@
 import type { AiAction, DataRecord, Entity, Workspace } from "../types";
+import { isModuleKind } from "./moduleKinds";
 
 export interface OperatorResult { answer: string; criteria: string; count: number; records: { entityId: string; recordId: string; label: string }[] }
 const label = (entity: Entity, record: DataRecord) => String(record[entity.fields.find(f => f.type === "text")?.id || "id"] || record.id);
 export function answerOperator(action: AiAction, workspace: Workspace): OperatorResult {
-  const orders = workspace.entities.find(entity => /orders/i.test(entity.name));
+  const orders = workspace.entities.find(entity => isModuleKind(entity, "orders"));
   if (action.type === "filter-delayed") {
     const records = orders?.records.filter(record => /delayed|late|ritard/i.test(String(record.status || ""))) || [];
     return { answer: orders ? `${records.length} ordini in ritardo trovati nei record attuali.` : "Questo workspace non ha un modulo Ordini.", criteria: "Ordini con stato contenente Delayed, Late o Ritardo", count: records.length, records: orders ? records.map(record => ({ entityId: orders.id, recordId: record.id, label: label(orders, record) })) : [] };

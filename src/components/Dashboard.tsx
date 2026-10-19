@@ -5,9 +5,10 @@ import { NodusLogo } from "./NodusLogo";
 import { recordLabel } from "./RecordDrawer";
 import type { DashboardWidget, Workspace } from "../types";
 import { WIDGET_KINDS, widgetMetric } from "../services/dashboardMetrics";
+import { isModuleKind } from "../services/moduleKinds";
 
 export function Dashboard({workspace,onAsk,onOpen,canCustomize,onWidgetsChange}:{workspace:Workspace;onAsk:()=>void;onOpen:(id:string)=>void;canCustomize:boolean;onWidgetsChange:(widgets:DashboardWidget[])=>boolean}){
- const valueEntity=workspace.entities.find(e=>/orders/i.test(e.name)&&e.fields.some(f=>f.type==="currency"))||workspace.entities.find(e=>e.fields.some(f=>f.type==="currency"));
+ const valueEntity=workspace.entities.find(e=>isModuleKind(e,"orders")&&e.fields.some(f=>f.type==="currency"))||workspace.entities.find(e=>e.fields.some(f=>f.type==="currency"));
  const valueField=valueEntity?.fields.find(f=>f.type==="currency");
  const valuedRecords=valueEntity&&valueField?valueEntity.records.filter(r=>r[valueField.id]!==""&&r[valueField.id]!=null&&Number.isFinite(Number(r[valueField.id]))):[];
  const total=valuedRecords.reduce((n,r)=>n+Number(r[valueField!.id]),0);

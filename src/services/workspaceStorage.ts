@@ -53,7 +53,13 @@ export const localWorkspaceRepository: WorkspaceRepository = {
       const backupKey = `${WORKSPACE_KEY}-backup-v${sourceVersion}-${Date.now()}`;
       try { localStorage.setItem(backupKey, original); } catch { throw new Error("Spazio insufficiente nel browser per conservare il backup della migrazione. Nessun dato modificato."); }
     }
-    const migrated = migrate(parsed), localized = localizeRealEstateNames(migrated);
+    const migrated = migrate(parsed), renamed = localizeRealEstateNames(migrated);
+    // Relation labels and alert titles embed module names: refresh their text after a rename.
+    const localized = renamed === migrated ? migrated : {
+      ...renamed,
+      relations: renamed.relations.map(r => ({ ...r, label: `${renamed.entities.find(e => e.id === r.fromEntityId)?.name || r.fromEntityId} → ${renamed.entities.find(e => e.id === r.toEntityId)?.name || r.toEntityId}` })),
+      alerts: deriveAlerts(renamed.entities),
+    };
     if (localized !== migrated && sourceVersion >= SCHEMA_VERSION) {
       const backupKey = `${WORKSPACE_KEY}-backup-v${sourceVersion}-labels-${Date.now()}`;
       try { localStorage.setItem(backupKey, original); } catch { throw new Error("Spazio insufficiente per il backup delle etichette. Nessun dato modificato."); }

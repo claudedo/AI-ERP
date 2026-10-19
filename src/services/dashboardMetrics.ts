@@ -24,7 +24,7 @@ export function widgetMetric(workspace: Workspace, widget: DashboardWidget): { l
   if (widget.kind === "assigned") return { label: "Assegnati a me", value: String(records.filter(record => record.assigneeId === workspace.currentUserId).length), detail: "Utente demo corrente" };
   if (widget.kind === "due") {
     const today = new Date().toISOString().slice(0, 10), next = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    const count = entities.reduce((total, source) => total + source.records.filter(record => source.fields.some(field => field.type === "date" && /due|scadenz|delivery|date/i.test(field.name) && String(record[field.id] || "") >= today && String(record[field.id] || "") <= next)).length, 0);
+    const count = entities.reduce((total, source) => total + source.records.filter(record => source.fields.some(field => field.type === "date" && /due|scadenz|deliver|consegn|date|\bdat[ao]\b|arriv|\beta\b/i.test(`${field.id} ${field.name}`) && String(record[field.id] || "") >= today && String(record[field.id] || "") <= next)).length, 0);
     return { label: "In scadenza entro 7 giorni", value: String(count), detail: "In base ai campi data attuali" };
   }
   return { label: "Approvazioni in attesa", value: String((workspace.approvals || []).filter(approval => approval.status === "pending").length), detail: "Coda di approvazione solo nel browser" };

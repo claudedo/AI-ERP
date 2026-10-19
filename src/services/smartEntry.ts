@@ -9,6 +9,7 @@ import {
 } from "./workspaceDomain";
 import { parseDate, parseItalianNumber } from "./importExport";
 import { creationTarget, entryMatchesIntent, isPropertyEntity } from "./entryIntent";
+import { isModuleKind } from "./moduleKinds";
 
 const scalar = z.union([
   z.string().max(10000),
@@ -368,7 +369,7 @@ export function proposeEntry(
           : /progett/i.test(hint)
             ? /project|progett/i.test(e.name)
             : /lead/i.test(hint)
-              ? /lead/i.test(e.name)
+              ? isModuleKind(e, "leads")
               : /contatt/i.test(hint)
                 ? e.id === "company-contacts"
                 : e.id === "company-sites",

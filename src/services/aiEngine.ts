@@ -15,6 +15,8 @@ import {
   roles,
   users,
 } from "../data/templates";
+import { isModuleKind } from "./moduleKinds";
+import { localizeTemplateEntity } from "./realEstateLabels";
 
 const profiles = {
   fashion: {
@@ -141,7 +143,7 @@ export function generateWorkspace(
   let entities =
     option.id === "advanced" ? all : all.filter((e) => wanted.has(e.name));
   if (!entities.length) entities = all.slice(0, 4);
-  return localizeRealEstateNames({
+  const generated = localizeRealEstateNames({
     id: `workspace-${crypto.randomUUID()}`,
     companyName: a.companyName,
     industry: a.industry,
@@ -149,7 +151,7 @@ export function generateWorkspace(
     entities,
     relations: relationsFor(entities),
     views: [],
-    workflows: structuredClone(demoWorkflows).filter(flow => flow.id === "confirmed-order-task" ? entities.some(e=>/orders/i.test(e.name)) : entities.some(e=>/deliver/i.test(e.name))).map(flow=>({...flow,runs:flow.runs.map(run=>({...run,demo:true}))})),
+    workflows: structuredClone(demoWorkflows).filter(flow => flow.id === "confirmed-order-task" ? entities.some(e=>isModuleKind(e,"orders")) : entities.some(e=>isModuleKind(e,"deliveries"))).map(flow=>({...flow,runs:flow.runs.map(run=>({...run,demo:true}))})),
     users: structuredClone(users),
     roles: structuredClone(roles),
     currentUserId: "usr-admin",
@@ -171,6 +173,8 @@ export function generateWorkspace(
       { id: "approvals", kind: "approvals" },
     ],
   });
+  // Relation labels and alert titles embed module names: derive them from the localized names.
+  return { ...generated, relations: relationsFor(generated.entities), alerts: deriveAlerts(generated.entities) };
 }
 
 export function interpretCommand(
@@ -214,7 +218,7 @@ export function interpretCommand(
   return { type, mode, command };
 }
 const findOrder = (w: Workspace) =>
-  w.entities.find((e) => /orders/i.test(e.name));
+  w.entities.find((e) => isModuleKind(e, "orders"));
 export function getProposalInapplicability(
   action: AiAction,
   w: Workspace,
@@ -408,6 +412,7 @@ export function applyProposal(
     )
   )
     return workspace;
+  const existingIds = new Set(workspace.entities.map((e) => e.id));
   const next = structuredClone(workspace),
     order = findOrder(next);
   if (
@@ -417,7 +422,7 @@ export function applyProposal(
   ) {
     order.fields.push({
       id: "priority",
-      name: "Priority",
+      name: "Priorità",
       type: "select",
       options: ["Low", "Normal", "High", "Urgent"],
     });
@@ -589,5 +594,7 @@ export function applyProposal(
     },
     ...(next.activity || []),
   ];
+  // System-created template modules start with Italian names, like generated workspaces.
+  next.entities = next.entities.map((e) => (existingIds.has(e.id) ? e : localizeTemplateEntity(e)));
   return next;
 }

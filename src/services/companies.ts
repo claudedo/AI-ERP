@@ -1,5 +1,6 @@
 import type { Entity, Field, Workspace } from "../types";
 import { relationsFor } from "../data/templates";
+import { isModuleKind } from "./moduleKinds";
 
 const text = (id: string, name: string, required = false): Field => ({
   id,
@@ -190,7 +191,7 @@ export function upgradeCompanies(input: Workspace): Workspace {
       }
   // Preserve textual customer references by converting their existing, explicit names to company records.
   for (const entity of next.entities)
-    if (/orders/i.test(entity.name)) {
+    if (isModuleKind(entity, "orders")) {
       for (const field of [
         text("item", "Descrizione ordine"),
         { id: "units", name: "Quantità", type: "number" as const },
@@ -292,9 +293,9 @@ export function upgradeCompanies(input: Workspace): Workspace {
     (flow) =>
       flow.config ||
       (flow.id === "confirmed-order-task"
-        ? next.entities.some((e) => /orders/i.test(e.name))
+        ? next.entities.some((e) => isModuleKind(e, "orders"))
         : flow.id === "delayed-delivery-alert"
-          ? next.entities.some((e) => /deliver/i.test(e.name))
+          ? next.entities.some((e) => isModuleKind(e, "deliveries"))
           : true),
   );
   for (const widget of next.dashboardWidgets || [])

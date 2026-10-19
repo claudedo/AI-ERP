@@ -112,6 +112,8 @@ describe("audit: storage recovery and stale tabs", () => {
   });
   it("rejects stale writes from another tab, preserving the first edit", () => {
     repository.save(fixture());
+    // Like useWorkspace: the snapshot is taken after load, which may rewrite storage (migrations).
+    repository.load();
     const snapshot = repository.raw(), first = repository.load()!, second = repository.load()!;
     repository.save(saveRecord(first, "parents", { id: "p1", name: "Updated A" }), snapshot);
     expect(() => repository.save(saveRecord(second, "parents", { id: "p2", name: "Updated B" }), snapshot)).toThrow(/altra scheda/);

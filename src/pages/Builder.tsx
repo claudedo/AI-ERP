@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { Analysis, ArchitectureOption } from "../types";
 import { NodusLogo } from "../components/NodusLogo";
+import { templateModuleLabel } from "../services/realEstateLabels";
 
 // Each example must match exactly one sector profile in aiEngine (Italian terms).
 const examples = {
@@ -236,7 +237,7 @@ export function Builder({
                 <p>{option.description}</p>
                 <div className="module-list">
                   {option.modules.map((m) => (
-                    <span key={m}>{m}</span>
+                    <span key={m}>{templateModuleLabel(m)}</span>
                   ))}
                 </div>
                 <ul>
@@ -392,7 +393,7 @@ function ProcessMap({ analysis }: { analysis: Analysis }) {
       <div className="map-chain">
         {analysis.process.map((p, i) => (
           <div key={p}>
-            <span>{p}</span>
+            <span>{templateModuleLabel(p)}</span>
             {i < analysis.process.length - 1 && <ChevronDown size={14} />}
           </div>
         ))}
@@ -400,7 +401,7 @@ function ProcessMap({ analysis }: { analysis: Analysis }) {
       <div className="map-branches">
         <GitBranch size={16} />
         {analysis.branches.map((b) => (
-          <span key={b}>{b}</span>
+          <span key={b}>{templateModuleLabel(b)}</span>
         ))}
       </div>
     </div>

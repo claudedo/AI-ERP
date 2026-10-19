@@ -14,6 +14,7 @@ import { Landing } from "./pages/Landing";
 import { downloadText } from "./services/importExport";
 import { localWorkspaceRepository } from "./services/workspaceStorage";
 import { dispatchWorkspaceAction } from "./services/workspaceActions";
+import { isModuleKind } from "./services/moduleKinds";
 const Builder = lazy(() => import("./pages/Builder").then(module => ({ default: module.Builder })));
 const WorkspaceApp = lazy(() => import("./pages/WorkspaceApp").then(module => ({ default: module.WorkspaceApp })));
 const VisualBuilder = lazy(() => import("./builder/VisualBuilder").then(module => ({ default: module.VisualBuilder })));
@@ -131,14 +132,14 @@ function Application() {
       next.workflows = [];
       const source = next.entities.find(
         (e) =>
-          /projects|offers|orders/i.test(e.name) &&
+          (isModuleKind(e, "projects") || isModuleKind(e, "offers") || isModuleKind(e, "orders")) &&
           e.fields.some((f) => f.id === "status"),
       );
       if (automation && source)
         next.workflows.push({
           id: "onboarding-status-notification",
           name: `Notifica stato · ${source.name}`,
-          trigger: `${source.name}: status changed`,
+          trigger: `${source.name}: cambio di stato`,
           actions: ["Notifica interna"],
           active: true,
           runs: [],
