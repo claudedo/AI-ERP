@@ -3,7 +3,7 @@ import type { DataRecord, Entity, Field, Workspace } from "../types";
 import type { Configuration } from "../types/configuration";
 import { relationsFor } from "../data/templates";
 import { DomainError, newId, requirePermission, validateRecord } from "./workspaceDomain";
-import { calculateFields, evaluateFormula, formulaReferences } from "./formulas";
+import { calculateFields, DivisionByZeroError, evaluateFormula, formulaReferences } from "./formulas";
 
 const id = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/).refine(value => !["__proto__", "constructor", "prototype"].includes(value));
 const name = z.string().trim().min(1).max(100);
@@ -32,59 +32,59 @@ export type StructuredProposal = z.infer<typeof proposalSchema>;
 export function configurationOf(w: Workspace): Configuration {
   return structuredClone({ entities: w.entities.map(({ records: _records, ...entity }) => entity), views: w.views, workflows: w.workflows.map(flow => ({ ...flow, runs: [] })), dashboardWidgets: w.dashboardWidgets || [], roles: w.roles });
 }
-const unique = (values: string[], label: string) => { if (new Set(values.map(item => item.toLocaleLowerCase())).size !== values.length) throw new DomainError(`Duplicate ${label}.`); };
+const unique = (values: string[], label: string) => { if (new Set(values.map(item => item.toLocaleLowerCase())).size !== values.length) throw new DomainError(`Elemento duplicato (${label}).`); };
 export function validateConfiguration(config: Configuration) {
-  unique(config.entities.map(entity => entity.id), "module identifier"); unique(config.entities.map(entity => entity.name.trim()), "module name");
-  unique(config.views.map(view => view.id), "view identifier"); unique(config.workflows.map(flow => flow.id), "workflow identifier");
+  unique(config.entities.map(entity => entity.id), "identificativo del modulo"); unique(config.entities.map(entity => entity.name.trim()), "nome del modulo");
+  unique(config.views.map(view => view.id), "identificativo della vista"); unique(config.workflows.map(flow => flow.id), "identificativo del workflow");
   for (const entity of config.entities) {
     id.parse(entity.id); name.parse(entity.name);
-    unique(entity.fields.map(field => field.id), "field identifier"); unique(entity.fields.map(field => field.name.trim()), "field name");
+    unique(entity.fields.map(field => field.id), "identificativo del campo"); unique(entity.fields.map(field => field.name.trim()), "nome del campo");
     for (const field of entity.fields) {
       fieldSchema.parse(field);
-      if (["id", "assigneeId"].includes(field.id)) throw new DomainError("This field identifier is reserved.");
+      if (["id", "assigneeId"].includes(field.id)) throw new DomainError("Questo identificativo di campo è riservato.");
       if (field.type === "relation" && !config.entities.some(target => target.id === field.relationEntityId)) throw new DomainError(`${entity.name} → ${field.name}: target module is missing.`);
-      if (field.options) unique(field.options, "field option");
-      for (const rule of [field.visibleWhen, field.requiredWhen]) if (rule && !entity.fields.some(item => item.id === rule.fieldId)) throw new DomainError("Conditional rule references a missing field.");
+      if (field.options) unique(field.options, "opzione del campo");
+      for (const rule of [field.visibleWhen, field.requiredWhen]) if (rule && !entity.fields.some(item => item.id === rule.fieldId)) throw new DomainError("Una regola condizionale fa riferimento a un campo inesistente.");
       if (field.formula) {
-        if (!["number", "currency"].includes(field.type)) throw new DomainError("Calculated fields must be numeric.");
-        for (const ref of formulaReferences(field.formula)) if (!entity.fields.some(item => item.id === ref && ["number", "currency"].includes(item.type))) throw new DomainError(`Formula references missing or nonnumeric field ${ref}.`);
+        if (!["number", "currency"].includes(field.type)) throw new DomainError("I campi calcolati devono essere numerici.");
+        for (const ref of formulaReferences(field.formula)) if (!entity.fields.some(item => item.id === ref && ["number", "currency"].includes(item.type))) throw new DomainError(`La formula fa riferimento a un campo ${ref} inesistente o non numerico.`);
         // Parse syntax without accepting identifiers or function calls. Data-dependent errors are checked on save.
-        try { evaluateFormula(field.formula, Object.fromEntries(entity.fields.map(item => [item.id, 1])) as DataRecord); } catch (error) { if (!(error instanceof Error && error.message === "Division by zero.")) throw error; }
+        try { evaluateFormula(field.formula, Object.fromEntries(entity.fields.map(item => [item.id, 1])) as DataRecord); } catch (error) { if (!(error instanceof DivisionByZeroError)) throw error; }
       }
     }
-    const visit = (field: Field, path: Set<string>) => { if (path.has(field.id)) throw new DomainError("Calculated fields contain a cycle."); for (const ref of formulaReferences(field.formula || "")) visit(entity.fields.find(item => item.id === ref)!, new Set([...path, field.id])); };
+    const visit = (field: Field, path: Set<string>) => { if (path.has(field.id)) throw new DomainError("I campi calcolati contengono un ciclo."); for (const ref of formulaReferences(field.formula || "")) visit(entity.fields.find(item => item.id === ref)!, new Set([...path, field.id])); };
     entity.fields.filter(field => field.formula).forEach(field => visit(field, new Set()));
-    if (entity.ui) { uiSchema.parse(entity.ui); for (const ref of [...entity.ui.columns, ...entity.ui.formOrder]) if (!entity.fields.some(field => field.id === ref)) throw new DomainError("Layout references a missing field."); unique(entity.ui.columns, "column"); unique(entity.ui.formOrder, "form field"); }
+    if (entity.ui) { uiSchema.parse(entity.ui); for (const ref of [...entity.ui.columns, ...entity.ui.formOrder]) if (!entity.fields.some(field => field.id === ref)) throw new DomainError("Il layout fa riferimento a un campo inesistente."); unique(entity.ui.columns, "colonna"); unique(entity.ui.formOrder, "campo del modulo"); }
   }
   for (const view of config.views) {
     const entity = config.entities.find(item => item.id === view.entityId);
-    if (!entity || [...view.columns, ...view.filters.map(filter => filter.fieldId), ...(view.sort ? [view.sort.fieldId] : [])].some(ref => !entity.fields.some(field => field.id === ref))) throw new DomainError(`View ${view.name} references a missing module or field.`);
+    if (!entity || [...view.columns, ...view.filters.map(filter => filter.fieldId), ...(view.sort ? [view.sort.fieldId] : [])].some(ref => !entity.fields.some(field => field.id === ref))) throw new DomainError(`La vista ${view.name} fa riferimento a un modulo o campo inesistente.`);
   }
   for (const flow of config.workflows) if (flow.config) {
     const c = flow.config, entity = config.entities.find(item => item.id === c.entityId);
-    if (!entity || [c.fieldId, c.conditionFieldId, c.targetFieldId].filter(Boolean).some(ref => !entity.fields.some(field => field.id === ref) && ref !== "assigneeId")) throw new DomainError(`Workflow ${flow.name} references a missing module or field.`);
-    if (c.action === "create-task" && !config.entities.some(item => item.id === c.targetEntityId)) throw new DomainError("Task target module is missing.");
+    if (!entity || [c.fieldId, c.conditionFieldId, c.targetFieldId].filter(Boolean).some(ref => !entity.fields.some(field => field.id === ref) && ref !== "assigneeId")) throw new DomainError(`Il workflow ${flow.name} fa riferimento a un modulo o campo inesistente.`);
+    if (c.action === "create-task" && !config.entities.some(item => item.id === c.targetEntityId)) throw new DomainError("Il modulo di destinazione dell’attività non esiste.");
   }
-  for (const widget of config.dashboardWidgets) if (widget.entityId) { const entity = config.entities.find(item => item.id === widget.entityId); if (!entity || widget.fieldId && !entity.fields.some(field => field.id === widget.fieldId)) throw new DomainError("Widget references a missing module or field."); }
-  if (!config.roles.find(role => role.id === "admin")?.permissions.editStructure) throw new DomainError("Admin must retain structural access.");
+  for (const widget of config.dashboardWidgets) if (widget.entityId) { const entity = config.entities.find(item => item.id === widget.entityId); if (!entity || widget.fieldId && !entity.fields.some(field => field.id === widget.fieldId)) throw new DomainError("Un widget fa riferimento a un modulo o campo inesistente."); }
+  if (!config.roles.find(role => role.id === "admin")?.permissions.editStructure) throw new DomainError("L’Admin deve mantenere l’accesso alla struttura.");
 }
 export function applyConfigurationOperations(base: Configuration, input: unknown): Configuration {
   const operations = z.array(operationSchema).min(1).max(100).parse(input), next = structuredClone(base);
   for (const operation of operations) {
     const entity = "entityId" in operation ? next.entities.find(item => item.id === operation.entityId) : undefined;
-    if ("entityId" in operation && !entity) throw new DomainError("The target module does not exist.");
+    if ("entityId" in operation && !entity) throw new DomainError("Il modulo di destinazione non esiste.");
     switch (operation.type) {
       case "createEntity": next.entities.push(operation.entity); break;
       case "renameEntity": entity!.name = operation.name; break;
       case "archiveEntity": entity!.archived = operation.archived; break;
       case "reorderEntity": next.entities.splice(next.entities.indexOf(entity!), 1); next.entities.splice(operation.index, 0, entity!); break;
       case "addField": entity!.fields.push(operation.field); if (entity!.ui) { entity!.ui.columns.push(operation.field.id); entity!.ui.formOrder.push(operation.field.id); } break;
-      case "updateField": { const index = entity!.fields.findIndex(field => field.id === operation.field.id); if (index < 0) throw new DomainError("Field not found."); entity!.fields[index] = operation.field; break; }
-      case "createRelation": { const field = entity!.fields.find(item => item.id === operation.fieldId); if (!field) throw new DomainError("Relationship field not found."); Object.assign(field, { type: "relation", relationEntityId: operation.targetEntityId, cardinality: operation.cardinality }); break; }
+      case "updateField": { const index = entity!.fields.findIndex(field => field.id === operation.field.id); if (index < 0) throw new DomainError("Campo non trovato."); entity!.fields[index] = operation.field; break; }
+      case "createRelation": { const field = entity!.fields.find(item => item.id === operation.fieldId); if (!field) throw new DomainError("Campo della relazione non trovato."); Object.assign(field, { type: "relation", relationEntityId: operation.targetEntityId, cardinality: operation.cardinality }); break; }
       case "configureEntity": entity!.ui = operation.ui; entity!.navigationGroup = operation.navigationGroup; break;
       case "createView": next.views.push(operation.view); break;
       case "setDashboard": next.dashboardWidgets = operation.widgets; break;
-      case "setRole": { const role = next.roles.find(item => item.id === operation.roleId); if (!role) throw new DomainError("Role not found."); role.permissions = operation.permissions; break; }
+      case "setRole": { const role = next.roles.find(item => item.id === operation.roleId); if (!role) throw new DomainError("Ruolo non trovato."); role.permissions = operation.permissions; break; }
       case "createWorkflow": next.workflows.push(operation.workflow); break;
     }
   }
@@ -102,25 +102,25 @@ export function saveConfigurationDraft(w: Workspace, operations: unknown): Works
 export function stageProposal(w: Workspace, input: unknown): Workspace {
   requirePermission(w, "editStructure");
   const proposal = proposalSchema.parse(input);
-  if (proposal.baseRevision !== (w.revision || 0)) throw new DomainError("This proposal is stale. Generate it again.");
-  if (proposal.ambiguities.length) throw new DomainError("Resolve the proposal ambiguities before applying it.");
+  if (proposal.baseRevision !== (w.revision || 0)) throw new DomainError("Questa proposta non è più aggiornata. Rigenerala.");
+  if (proposal.ambiguities.length) throw new DomainError("Risolvi le ambiguità della proposta prima di applicarla.");
   const next = saveConfigurationDraft(w, proposal.operations);
-  next.activity = [{ id: newId("activity"), at: new Date().toISOString(), userId: w.currentUserId, source: "ai", summary: `Staged: ${proposal.interpretation}` }, ...(w.activity || [])];
+  next.activity = [{ id: newId("activity"), at: new Date().toISOString(), userId: w.currentUserId, source: "ai", summary: `Proposta in bozza: ${proposal.interpretation}` }, ...(w.activity || [])];
   return next;
 }
 export function publishConfiguration(w: Workspace): Workspace {
   requirePermission(w, "editStructure");
   const draft = w.configurationDraft;
-  if (!draft) throw new DomainError("There is no draft to publish.");
-  if (draft.baseVersion !== (w.configurationVersion || 1)) throw new DomainError("The published configuration changed. Rebase the draft first.");
+  if (!draft) throw new DomainError("Non ci sono bozze da pubblicare.");
+  if (draft.baseVersion !== (w.configurationVersion || 1)) throw new DomainError("La configurazione pubblicata è cambiata. Aggiorna prima la bozza.");
   validateConfiguration(draft.configuration);
   const next = structuredClone(previewConfiguration(w, draft.configuration));
   for (const old of w.entities) {
     const entity = next.entities.find(item => item.id === old.id);
-    if (!entity && old.records.length) throw new DomainError(`Cannot remove ${old.name}: records exist. Archive it instead.`);
+    if (!entity && old.records.length) throw new DomainError(`Impossibile rimuovere ${old.name}: contiene record. Archivialo invece.`);
     if (entity) for (const field of old.fields) {
       const replacement = entity.fields.find(item => item.id === field.id), populated = old.records.some(record => record[field.id] != null && record[field.id] !== "");
-      if (populated && (!replacement || replacement.type !== field.type && ![field.type, replacement.type].every(type => ["number", "currency"].includes(type)))) throw new DomainError(`${old.name} → ${field.name} contains data. Keep the field and migrate to a new one before changing its type.`);
+      if (populated && (!replacement || replacement.type !== field.type && ![field.type, replacement.type].every(type => ["number", "currency"].includes(type)))) throw new DomainError(`${old.name} → ${field.name} contiene dati. Mantieni il campo e migra a uno nuovo prima di cambiarne il tipo.`);
     }
   }
   for (const entity of next.entities) {
@@ -138,12 +138,12 @@ export function publishConfiguration(w: Workspace): Workspace {
   next.configurationHistory = [...(w.configurationHistory || []), { version: w.configurationVersion || 1, configuration: configurationOf(w), publishedAt: new Date().toISOString(), userId: w.currentUserId }].slice(-20);
   next.configurationVersion = (w.configurationVersion || 1) + 1; next.configurationDraft = undefined;
   next.revision = (w.revision || 0) + 1;
-  next.activity = [{ id: newId("activity"), at: new Date().toISOString(), userId: w.currentUserId, source: "manual", summary: `Published configuration v${next.configurationVersion}` }, ...(w.activity || [])];
+  next.activity = [{ id: newId("activity"), at: new Date().toISOString(), userId: w.currentUserId, source: "manual", summary: `Configurazione v${next.configurationVersion} pubblicata` }, ...(w.activity || [])];
   return next;
 }
 export function restoreConfigurationDraft(w: Workspace, version: number): Workspace {
   requirePermission(w, "editStructure");
   const previous = w.configurationHistory?.find(item => item.version === version);
-  if (!previous) throw new DomainError("Configuration version is unavailable.");
+  if (!previous) throw new DomainError("Versione della configurazione non disponibile.");
   return { ...w, revision: (w.revision || 0) + 1, configurationDraft: { id: newId("draft"), baseVersion: w.configurationVersion || 1, configuration: structuredClone(previous.configuration), updatedAt: new Date().toISOString() } };
 }

@@ -77,7 +77,7 @@ export function RecordDrawer({
     setSaving(true);
     try {
       const latest = workspace.entities.find(e => e.id === entity.id)?.records.find(r => r.id === draft.id);
-      if (originalRecord !== null && JSON.stringify(latest) !== originalRecord) throw new Error("This record changed while you were editing. Reopen it before saving; your draft has not been applied.");
+      if (originalRecord !== null && JSON.stringify(latest) !== originalRecord) throw new Error("Questo record è cambiato mentre lo modificavi. Riaprilo prima di salvare: la tua bozza non è stata applicata.");
       const calculated = calculateFields(entity.fields, draft);
       const next = validateRecord(workspace, entity, calculated);
       setErrors(next);
@@ -91,7 +91,7 @@ export function RecordDrawer({
       return false;
     } catch (error) {
       setErrors({
-        form: error instanceof Error ? error.message : "Calculation failed.",
+        form: error instanceof Error ? error.message : "Calcolo non riuscito.",
       });
       return false;
     } finally {
@@ -131,7 +131,7 @@ export function RecordDrawer({
             disabled={!canEdit}
             onChange={(e) => changeField(field.id, e.target.checked)}
           />
-          <span>Yes, enabled</span>
+          <span>Sì, attivo</span>
         </label>
       );
     if (field.type === "status" || field.type === "select")
@@ -203,20 +203,20 @@ export function RecordDrawer({
           >
             <header>
               <div>
-                <span>{record ? "RECORD DETAILS" : "NEW RECORD"}</span>
+                <span>{record ? "DETTAGLI RECORD" : "NUOVO RECORD"}</span>
                 <Dialog.Title>
                   {record
                     ? recordLabel(entity, record)
-                    : `Add ${entity.singularName || "record"}`}
+                    : `Aggiungi ${entity.singularName || "record"}`}
                 </Dialog.Title>
                 <Dialog.Description id="record-drawer-description">
                   {record
-                    ? "Review and update this record."
-                    : "Complete the fields to create a new record."}
+                    ? "Controlla e aggiorna questo record."
+                    : "Compila i campi per creare un nuovo record."}
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <button aria-label="Close">
+                <button aria-label="Chiudi">
                   <X />
                 </button>
               </Dialog.Close>
@@ -293,9 +293,9 @@ export function RecordDrawer({
                   ),
                 )}
               <div className="field">
-                <span>Assigned to</span>
+                <span>Assegnato a</span>
                 <Select
-                  ariaLabel="Assigned to"
+                  ariaLabel="Assegnato a"
                   value={String(draft.assigneeId || "")}
                   disabled={!canEdit}
                   onChange={(value) => changeField("assigneeId", value)}
@@ -303,7 +303,7 @@ export function RecordDrawer({
                     value: user.id,
                     label: user.name,
                   }))}
-                  emptyLabel="Unassigned"
+                  emptyLabel="Non assegnato"
                 />
               </div>
               {entity.id === "companies" && record && (
@@ -339,25 +339,25 @@ export function RecordDrawer({
                   <AlertDialog.Trigger asChild>
                     <button className="danger-button">
                       <Trash2 />
-                      Delete
+                      Elimina
                     </button>
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>
                     <AlertDialog.Overlay className="alert-overlay" />
                     <AlertDialog.Content className="confirm-box">
                       <AlertTriangle />
-                      <AlertDialog.Title>Delete this record?</AlertDialog.Title>
+                      <AlertDialog.Title>Eliminare questo record?</AlertDialog.Title>
                       <AlertDialog.Description>
-                        This action removes the record from the current
-                        workspace.
+                        Questa azione rimuove il record dall'area di lavoro
+                        corrente.
                         {linkedCount > 0 && (
-                          <> {linkedCount} incoming links will be cleared.</>
+                          <> {linkedCount} collegamenti in entrata verranno cancellati.</>
                         )}{" "}
-                        Comments and local attachments will also be removed.
+                        Verranno rimossi anche i commenti e gli allegati locali.
                       </AlertDialog.Description>
                       <div>
                         <AlertDialog.Cancel asChild>
-                          <button className="secondary">Keep record</button>
+                          <button className="secondary">Mantieni record</button>
                         </AlertDialog.Cancel>
                         <AlertDialog.Action asChild>
                           <button
@@ -367,7 +367,7 @@ export function RecordDrawer({
                                 guard.finish();
                             }}
                           >
-                            Delete record
+                            Elimina record
                           </button>
                         </AlertDialog.Action>
                       </div>
@@ -379,11 +379,11 @@ export function RecordDrawer({
               )}
               <div>
                 <Dialog.Close asChild>
-                  <button className="secondary">Cancel</button>
+                  <button className="secondary">Annulla</button>
                 </Dialog.Close>
                 {canEdit && (
                   <button className="primary" onClick={save} disabled={saving} aria-busy={saving}>
-                    Save record
+                    Salva record
                   </button>
                 )}
               </div>

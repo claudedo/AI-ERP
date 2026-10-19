@@ -141,7 +141,7 @@ export function CompanyPanel({
           )
           .map((a) => (
             <p key={a.id}>
-              {a.summary} · {new Date(a.at).toLocaleString()}
+              {a.summary} · {new Date(a.at).toLocaleString("it-IT")}
             </p>
           ))}
         {!(workspace.activity || []).some((a) => a.recordId === company.id) && (

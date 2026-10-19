@@ -82,10 +82,10 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
     lock.current = true; setBusy(true); setError("");
     try {
       requirePermission(workspace, "editStructure");
-      if (role.id !== "admin") throw new Error("Admin required");
+      if (role.id !== "admin") throw new Error("Serve il ruolo di amministratore");
       const selected = reviewStructure(workspace, structure, excluded);
       const ok = onApplyStructure ? await onApplyStructure(selected) : setWorkspace(publishConfiguration(stageProposal(workspace, selected)));
-      if (!ok) throw new Error("Save failed");
+      if (!ok) throw new Error("Salvataggio non riuscito");
       append("Proposta confermata", "Struttura aggiornata e salvata nella cronologia del gestionale.");
       setStructure(null); onToast("Struttura aggiornata");
     } catch (cause) { setError(chatErrorMessage(cause)); }

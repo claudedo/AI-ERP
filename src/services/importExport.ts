@@ -29,23 +29,23 @@ export function parseCsv(text: string): ParsedSheet {
     else if ((char === "\n" || char === "\r") && !quoted) { if (char === "\r" && source[i + 1] === "\n") i++; row.push(cell.trim()); if (row.some(Boolean)) rows.push(row); row = []; cell = ""; }
     else cell += char;
   }
-  if (quoted) throw new DomainError("CSV contains an unclosed quoted value.");
+  if (quoted) throw new DomainError("Il CSV contiene un valore tra virgolette non chiuso.");
   row.push(cell.trim()); if (row.some(Boolean)) rows.push(row);
-  if (!rows.length || !rows[0].some(Boolean)) throw new DomainError("The file has no header row.");
-  return { name: "CSV", headers: rows[0].map((h, i) => h || `Column ${i + 1}`), rows: rows.slice(1) };
+  if (!rows.length || !rows[0].some(Boolean)) throw new DomainError("Il file non contiene la riga di intestazione.");
+  return { name: "CSV", headers: rows[0].map((h, i) => h || `Colonna ${i + 1}`), rows: rows.slice(1) };
 }
 export async function parseFile(file: File): Promise<ParsedSheet[]> {
-  if (file.size > limit) throw new DomainError("Files must be 10 MB or smaller.");
+  if (file.size > limit) throw new DomainError("I file devono essere di massimo 10 MB.");
   if (/\.csv$/i.test(file.name)) return [parseCsv(await file.text())];
-  if (!/\.xlsx$/i.test(file.name)) throw new DomainError("Choose a CSV or XLSX file.");
+  if (!/\.xlsx$/i.test(file.name)) throw new DomainError("Scegli un file CSV o XLSX.");
   try {
     const { default: readExcelFile } = await import("read-excel-file/browser");
     const sheets = await readExcelFile(file);
     return sheets.map(sheet => {
       const rows = sheet.data.map(row => row.map(textOf));
-      return { name: sheet.sheet, headers: (rows[0] || []).map((h, i) => h || `Column ${i + 1}`), rows: rows.slice(1).filter(row => row.some(Boolean)) };
+      return { name: sheet.sheet, headers: (rows[0] || []).map((h, i) => h || `Colonna ${i + 1}`), rows: rows.slice(1).filter(row => row.some(Boolean)) };
     });
-  } catch (error) { throw new DomainError(error instanceof Error ? `Could not read Excel file: ${error.message}` : "Could not read Excel file."); }
+  } catch (error) { throw new DomainError(error instanceof Error ? `Impossibile leggere il file Excel: ${error.message}` : "Impossibile leggere il file Excel."); }
 }
 export function inferFieldType(header: string, values: string[]): FieldType {
   const h = header.toLowerCase(), sample = values.filter(Boolean).slice(0, 30);
@@ -98,20 +98,20 @@ function convert(raw: string, field: Field, workspace: Workspace): RecordValue {
 function targetEntity(plan: ImportPlan, w: Workspace): Entity {
   if (plan.entityId) {
     const existing = w.entities.find(e => e.id === plan.entityId);
-    if (!existing) throw new DomainError("Target module no longer exists.");
+    if (!existing) throw new DomainError("Il modulo di destinazione non esiste più.");
     return existing;
   }
   const name = plan.newModuleName?.trim();
-  if (!name) throw new DomainError("Enter a name for the new module.");
+  if (!name) throw new DomainError("Inserisci un nome per il nuovo modulo.");
   const id = slug(name);
-  if (w.entities.some(e => e.id === id || e.name.toLowerCase() === name.toLowerCase())) throw new DomainError("A module with this name already exists.");
+  if (w.entities.some(e => e.id === id || e.name.toLowerCase() === name.toLowerCase())) throw new DomainError("Esiste già un modulo con questo nome.");
   const fields: Field[] = plan.mappings.filter(m => m.fieldId).map(m => {
     const values = plan.sheet.rows.map(r => r[m.column] || "").filter(Boolean);
     return { id: m.fieldId, name: plan.sheet.headers[m.column], type: m.type, ...(m.type === "status" || m.type === "select" ? { options: [...new Set(values)].slice(0, 100) } : {}) };
   });
-  if (!fields.length) throw new DomainError("Map at least one column.");
-  if (new Set(fields.map(f => f.id)).size !== fields.length) throw new DomainError("Two columns cannot map to the same field.");
-  if (fields.some(f => ["id", "assigneeId", "__proto__", "constructor", "prototype"].includes(f.id))) throw new DomainError("This field identifier is reserved. Rename the mapped field.");
+  if (!fields.length) throw new DomainError("Associa almeno una colonna.");
+  if (new Set(fields.map(f => f.id)).size !== fields.length) throw new DomainError("Due colonne non possono essere associate allo stesso campo.");
+  if (fields.some(f => ["id", "assigneeId", "__proto__", "constructor", "prototype"].includes(f.id))) throw new DomainError("Questo identificativo di campo è riservato. Rinomina il campo associato.");
   return { id, name, fields, records: [] };
 }
 export function previewImport(plan: ImportPlan, w: Workspace): ImportPreview {
@@ -125,24 +125,24 @@ export function previewImport(plan: ImportPlan, w: Workspace): ImportPreview {
     try {
       for (const mapping of plan.mappings.filter(m => m.fieldId)) {
         const field = entity.fields.find(f => f.id === mapping.fieldId);
-        if (!field) throw new DomainError(`Mapped field ${mapping.fieldId} no longer exists.`);
+        if (!field) throw new DomainError(`Il campo associato ${mapping.fieldId} non esiste più.`);
         record[field.id] = convert(source[mapping.column] || "", field, w);
       }
       const calculated = calculateFields(entity.fields, record);
       const errors = validateRecord(validationWorkspace, validationEntity, calculated);
       if (Object.keys(errors).length) throw new DomainError(Object.values(errors).join(" "));
       const key = String(calculated[duplicateField.id] ?? "").trim().toLowerCase();
-      if (key && keys.has(key)) throw new DomainError(`Duplicate ${duplicateField.name}: ${record[duplicateField.id]}. Row skipped.`);
+      if (key && keys.has(key)) throw new DomainError(`${duplicateField.name} duplicato: ${record[duplicateField.id]}. Riga saltata.`);
       if (key) keys.add(key);
       records.push(calculated);
       validationEntity.records.push(calculated);
-    } catch (error) { issues.push({ row: i + 2, reason: error instanceof Error ? error.message : "Invalid row." }); }
+    } catch (error) { issues.push({ row: i + 2, reason: error instanceof Error ? error.message : "Riga non valida." }); }
   }
   return { accepted: records.length, skipped: issues.length, issues, records, entity };
 }
 export function executeImport(plan: ImportPlan, w: Workspace): { workspace: Workspace; report: ImportPreview } {
   const role = currentRole(w);
-  if (!role.permissions.editRecords || (!plan.entityId && !role.permissions.editStructure)) throw new DomainError("Your demo role cannot import into this module.");
+  if (!role.permissions.editRecords || (!plan.entityId && !role.permissions.editStructure)) throw new DomainError("Il tuo ruolo demo non può importare in questo modulo.");
   const report = previewImport(plan, w);
   let next = structuredClone(w);
   if (!plan.entityId) { next.entities.push(report.entity); next.revision = (next.revision || 0) + 1; }

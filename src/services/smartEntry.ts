@@ -39,7 +39,7 @@ export const entrySchema = z.object({
               typeof value.id === "string" &&
               value.id.length > 0 &&
               value.id.length <= 160,
-            "Record identifier is required.",
+            "L’identificativo del record è obbligatorio.",
           ),
       }),
     )

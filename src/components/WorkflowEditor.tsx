@@ -52,19 +52,19 @@ function WorkflowEditorForm({
   const entity = workspace.entities.find((item) => item.id === entityId);
   const create = () => {
     if (!name.trim() || !entity) {
-      setError("Name and source module are required.");
+      setError("Nome e modulo di origine sono obbligatori.");
       return;
     }
     if ((event === "update" || event === "status") && !fieldId) {
-      setError("Choose a trigger field.");
+      setError("Scegli il campo dell'evento.");
       return;
     }
     if (action === "create-task" && !targetEntityId) {
-      setError("Choose the target task module.");
+      setError("Scegli il modulo di destinazione delle attività.");
       return;
     }
     if (action === "update-field" && !targetFieldId) {
-      setError("Choose the field to update.");
+      setError("Scegli il campo da aggiornare.");
       return;
     }
     const config: WorkflowConfig = {
@@ -89,7 +89,7 @@ function WorkflowEditorForm({
       config,
     };
     if (onSave(flow)) onClose();
-    else setError("Workflow could not be saved.");
+    else setError("Non è stato possibile salvare l'automazione.");
   };
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
@@ -101,33 +101,33 @@ function WorkflowEditorForm({
         >
           <header>
             <div>
-              <Dialog.Title>Create workflow</Dialog.Title>
+              <Dialog.Title>Crea automazione</Dialog.Title>
               <Dialog.Description id="workflow-editor-description">
-                Runs in this browser when records change. No background service
-                or email is sent.
+                Si esegue in questo browser quando i record cambiano. Nessun
+                servizio in background e nessuna email inviata.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
-              <button aria-label="Close">
+              <button aria-label="Chiudi">
                 <X />
               </button>
             </Dialog.Close>
           </header>
           <div className="workflow-editor-fields">
             <label>
-              Name
+              Nome
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. Escalate large orders"
+                placeholder="es. Segnala gli ordini di importo elevato"
               />
             </label>
             <section>
               <h3>
-                <GitBranch size={15} /> When
+                <GitBranch size={15} /> Quando
               </h3>
               <label>
-                Module
+                Modulo
                 <select
                   value={entityId}
                   onChange={(event) => {
@@ -145,26 +145,26 @@ function WorkflowEditorForm({
                 </select>
               </label>
               <label>
-                Event
+                Evento
                 <select
                   value={event}
                   onChange={(event) =>
                     setEvent(event.target.value as WorkflowConfig["event"])
                   }
                 >
-                  <option value="create">Record created</option>
-                  <option value="update">Field updated</option>
-                  <option value="status">Status changed</option>
+                  <option value="create">Record creato</option>
+                  <option value="update">Campo aggiornato</option>
+                  <option value="status">Stato cambiato</option>
                 </select>
               </label>
               {event !== "create" && (
                 <label>
-                  Field
+                  Campo
                   <select
                     value={fieldId}
                     onChange={(event) => setFieldId(event.target.value)}
                   >
-                    <option value="">Choose field</option>
+                    <option value="">Scegli campo</option>
                     {entity?.fields
                       .filter(
                         (field) =>
@@ -182,14 +182,14 @@ function WorkflowEditorForm({
               )}
             </section>
             <section>
-              <h3>If (optional)</h3>
+              <h3>Se (facoltativo)</h3>
               <label>
-                Condition field
+                Campo della condizione
                 <select
                   value={conditionFieldId}
                   onChange={(event) => setConditionFieldId(event.target.value)}
                 >
-                  <option value="">Always run</option>
+                  <option value="">Esegui sempre</option>
                   {entity?.fields.map((field) => (
                     <option key={field.id} value={field.id}>
                       {field.name}
@@ -200,7 +200,7 @@ function WorkflowEditorForm({
               {conditionFieldId && (
                 <>
                   <label>
-                    Comparison
+                    Confronto
                     <select
                       value={conditionOperator}
                       onChange={(event) =>
@@ -209,12 +209,12 @@ function WorkflowEditorForm({
                         )
                       }
                     >
-                      <option value="equals">Equals</option>
-                      <option value="greater-than">Greater than</option>
+                      <option value="equals">Uguale a</option>
+                      <option value="greater-than">Maggiore di</option>
                     </select>
                   </label>
                   <label>
-                    Value
+                    Valore
                     <input
                       value={conditionValue}
                       onChange={(event) =>
@@ -226,29 +226,29 @@ function WorkflowEditorForm({
               )}
             </section>
             <section>
-              <h3>Then</h3>
+              <h3>Allora</h3>
               <label>
-                Action
+                Azione
                 <select
                   value={action}
                   onChange={(event) =>
                     setAction(event.target.value as WorkflowConfig["action"])
                   }
                 >
-                  <option value="notify">Create internal notification</option>
-                  <option value="create-task">Create task</option>
-                  <option value="update-field">Update field</option>
-                  <option value="request-approval">Request approval</option>
+                  <option value="notify">Crea notifica interna</option>
+                  <option value="create-task">Crea attività</option>
+                  <option value="update-field">Aggiorna campo</option>
+                  <option value="request-approval">Richiedi approvazione</option>
                 </select>
               </label>
               {action === "create-task" && (
                 <label>
-                  Target module
+                  Modulo di destinazione
                   <select
                     value={targetEntityId}
                     onChange={(event) => setTargetEntityId(event.target.value)}
                   >
-                    <option value="">Choose task module</option>
+                    <option value="">Scegli modulo delle attività</option>
                     {workspace.entities.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
@@ -260,12 +260,12 @@ function WorkflowEditorForm({
               {action === "update-field" && (
                 <>
                   <label>
-                    Target field
+                    Campo di destinazione
                     <select
                       value={targetFieldId}
                       onChange={(event) => setTargetFieldId(event.target.value)}
                     >
-                      <option value="">Choose field</option>
+                      <option value="">Scegli campo</option>
                       {entity?.fields.map((field) => (
                         <option key={field.id} value={field.id}>
                           {field.name}
@@ -274,7 +274,7 @@ function WorkflowEditorForm({
                     </select>
                   </label>
                   <label>
-                    New value
+                    Nuovo valore
                     <input
                       value={targetValue}
                       onChange={(event) => setTargetValue(event.target.value)}
@@ -291,10 +291,10 @@ function WorkflowEditorForm({
           </div>
           <footer>
             <button className="secondary" onClick={onClose}>
-              Cancel
+              Annulla
             </button>
             <button className="primary" onClick={create}>
-              Create workflow
+              Crea automazione
             </button>
           </footer>
         </Dialog.Content>

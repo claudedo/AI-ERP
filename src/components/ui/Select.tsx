@@ -5,7 +5,7 @@ import { Select as RSelect } from "radix-ui";
 const EMPTY = "__empty__";
 export interface SelectOption { value: string; label: string }
 
-export function Select({ value, onChange, options, placeholder = "Select…", emptyLabel, disabled, size = "md", ariaLabel, ariaInvalid, id }: {
+export function Select({ value, onChange, options, placeholder = "Seleziona…", emptyLabel, disabled, size = "md", ariaLabel, ariaInvalid, id }: {
   value: string; onChange: (v: string) => void; options: (string | SelectOption)[]; placeholder?: string;
   /** When set, an explicit item that clears the value (e.g. "All statuses"). */
   emptyLabel?: string; disabled?: boolean; size?: "sm" | "md"; ariaLabel?: string; ariaInvalid?: boolean; id?: string;

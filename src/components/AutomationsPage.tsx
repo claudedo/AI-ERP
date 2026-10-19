@@ -39,21 +39,21 @@ export function AutomationsPage({
       <div className="page-heading">
         <div>
           <span className="overline">WORKSPACE / AUTOMATIONS</span>
-          <h1>Automations</h1>
+          <h1>Automazioni</h1>
           <p>
-            {workflows.filter((w) => w.active).length} active workflows ·{" "}
-            {runs.length} recorded runs · browser-only execution
+            {workflows.filter((w) => w.active).length} workflow attivi ·{" "}
+            {runs.length} esecuzioni registrate · esecuzione solo nel browser
           </p>
         </div>
         {canEdit && (
           <div className="heading-actions">
             <button className="secondary" onClick={() => setEditing(true)}>
               <Plus size={15} />
-              Create workflow
+              Crea workflow
             </button>
             <button className="primary" onClick={onCreate}>
               <GitBranch />
-              Design with NODUS AI
+              Progetta con NODUS AI
             </button>
           </div>
         )}
@@ -62,19 +62,19 @@ export function AutomationsPage({
         <div>
           <Zap />
           <span>
-            <strong>{workflows.filter((w) => w.active).length}</strong>Active
+            <strong>{workflows.filter((w) => w.active).length}</strong>Attive
           </span>
         </div>
         <div>
           <Play />
           <span>
-            <strong>{runsThisWeek}</strong>Runs this week
+            <strong>{runsThisWeek}</strong>Esecuzioni questa settimana
           </span>
         </div>
         <div>
           <Clock3 />
           <span>
-            <strong>{successRate}</strong>Success rate
+            <strong>{successRate}</strong>Tasso di successo
           </span>
         </div>
       </div>
@@ -92,7 +92,7 @@ export function AutomationsPage({
               <label className="switch">
                 <input
                   type="checkbox"
-                  aria-label={`Enable ${w.name}`}
+                  aria-label={`Attiva ${w.name}`}
                   checked={w.active}
                   disabled={!canEdit}
                   onChange={() => onToggle(w.id)}
@@ -101,12 +101,12 @@ export function AutomationsPage({
               </label>
             </div>
             <div className="workflow-line">
-              <span>WHEN</span>
+              <span>QUANDO</span>
               <strong>{w.trigger}</strong>
             </div>
             {w.config?.conditionFieldId && (
               <div className="workflow-line">
-                <span>IF</span>
+                <span>SE</span>
                 <strong>
                   {w.config.conditionFieldId} {w.config.conditionOperator}{" "}
                   {w.config.conditionValue}
@@ -115,25 +115,25 @@ export function AutomationsPage({
             )}
             {w.actions.map((a, i) => (
               <div className="workflow-line" key={a}>
-                <span>{i === 0 ? "THEN" : "AND"}</span>
+                <span>{i === 0 ? "ALLORA" : "E"}</span>
                 <strong>{a}</strong>
               </div>
             ))}
             <footer>
               <span className={w.active ? "live" : "paused"}>
-                {w.active ? "Active" : "Paused"}
+                {w.active ? "Attiva" : "In pausa"}
               </span>
               <span>
                 {w.runs[0]
-                  ? `Last run ${new Date(w.runs[0].at).toLocaleDateString("en-GB")}`
-                  : "No runs yet"}
+                  ? `Ultima esecuzione ${new Date(w.runs[0].at).toLocaleDateString("it-IT")}`
+                  : "Nessuna esecuzione"}
               </span>
               {w.runs.length > 0 && (
                 <button
                   aria-expanded={expanded === w.id}
                   onClick={() => setExpanded(expanded === w.id ? null : w.id)}
                 >
-                  {expanded === w.id ? "Hide history ↑" : "View history →"}
+                  {expanded === w.id ? "Nascondi cronologia ↑" : "Vedi cronologia →"}
                 </button>
               )}
             </footer>
@@ -142,7 +142,7 @@ export function AutomationsPage({
                 {w.runs.map((run) => (
                   <div key={run.id}>
                     <time dateTime={run.at}>
-                      {new Date(run.at).toLocaleString("en-GB")}
+                      {new Date(run.at).toLocaleString("it-IT")}
                     </time>
                     <strong>{run.status}</strong>
                     <span>{run.summary}</span>
@@ -155,12 +155,12 @@ export function AutomationsPage({
         {workflows.length === 0 && (
           <div className="empty-state">
             <Zap />
-            <h3>No automations yet</h3>
-            <p>Use NODUS AI Builder to turn repetitive work into a workflow.</p>
+            <h3>Nessuna automazione</h3>
+            <p>Usa NODUS AI per trasformare il lavoro ripetitivo in un workflow.</p>
             {canEdit && (
               <button className="secondary" onClick={() => setEditing(true)}>
                 <Plus />
-                Create automation
+                Crea automazione
               </button>
             )}
           </div>

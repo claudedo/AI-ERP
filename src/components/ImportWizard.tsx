@@ -89,7 +89,7 @@ function ImportWizardForm({
       return {
         report: null,
         error:
-          cause instanceof Error ? cause.message : "Import preview failed.",
+          cause instanceof Error ? cause.message : "Anteprima dell'importazione non riuscita.",
       };
     }
   }, [
@@ -112,7 +112,7 @@ function ImportWizardForm({
       setStep(1);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Could not open the file.",
+        cause instanceof Error ? cause.message : "Impossibile aprire il file.",
       );
     } finally {
       setBusy(false);
@@ -152,7 +152,7 @@ function ImportWizardForm({
       const imported = executeImport(plan, workspace);
       if (!onImport(imported.workspace))
         throw new Error(
-          "Workspace could not be saved. No import was committed.",
+          "Non è stato possibile salvare l'area di lavoro. Nessuna importazione è stata applicata.",
         );
       setResult({
         accepted: imported.report.accepted,
@@ -161,7 +161,7 @@ function ImportWizardForm({
       });
       setStep(4);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Import failed.");
+      setError(cause instanceof Error ? cause.message : "Importazione non riuscita.");
     }
   };
   const issuesCsv = result
@@ -177,20 +177,20 @@ function ImportWizardForm({
         >
           <header>
             <div>
-              <Dialog.Title>Import data</Dialog.Title>
+              <Dialog.Title>Importa dati</Dialog.Title>
               <Dialog.Description id="import-description">
-                CSV or Excel · local deterministic suggestions · no data changes
-                before confirmation
+                CSV o Excel · suggerimenti locali deterministici · nessuna
+                modifica ai dati prima della conferma
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
-              <button aria-label="Close import">
+              <button aria-label="Chiudi importazione">
                 <X size={18} />
               </button>
             </Dialog.Close>
           </header>
-          <div className="import-steps" aria-label="Import progress">
-            {["File", "Module", "Mapping", "Review", "Result"].map(
+          <div className="import-steps" aria-label="Avanzamento importazione">
+            {["File", "Modulo", "Mappatura", "Revisione", "Risultato"].map(
               (name, index) => (
                 <span
                   key={name}
@@ -212,26 +212,26 @@ function ImportWizardForm({
             <div className="import-body">
               <label className="import-drop">
                 <Upload />
-                <strong>Choose CSV or XLSX</strong>
-                <small>Up to 10 MB. Files are processed in this browser.</small>
+                <strong>Scegli un file CSV o XLSX</strong>
+                <small>Fino a 10 MB. I file vengono elaborati in questo browser.</small>
                 <input
                   type="file"
                   accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={(event) => void load(event.target.files?.[0])}
                 />
               </label>
-              {busy && <p role="status">Reading file…</p>}
+              {busy && <p role="status">Lettura del file…</p>}
             </div>
           )}
           {step === 1 && sheet && (
             <div className="import-body">
               <p>
                 <FileSpreadsheet size={16} /> {fileName} · {sheet.rows.length}{" "}
-                rows
+                righe
               </p>
               {sheets.length > 1 && (
                 <label>
-                  Sheet
+                  Foglio
                   <select
                     value={sheetName}
                     onChange={(event) => setSheetName(event.target.value)}
@@ -264,12 +264,12 @@ function ImportWizardForm({
               </div>
               <div className="import-choice">
                 <label>
-                  Destination
+                  Destinazione
                   <select
                     value={entityId}
                     onChange={(event) => setEntityId(event.target.value)}
                   >
-                    <option value="">New module</option>
+                    <option value="">Nuovo modulo</option>
                     {workspace.entities.map((e) => (
                       <option key={e.id} value={e.id}>
                         {e.name}
@@ -279,11 +279,11 @@ function ImportWizardForm({
                 </label>
                 {!entityId && (
                   <label>
-                    New module name
+                    Nome del nuovo modulo
                     <input
                       value={newModuleName}
                       onChange={(event) => setNewModuleName(event.target.value)}
-                      placeholder="e.g. Inventory"
+                      placeholder="es. Magazzino"
                     />
                   </label>
                 )}
@@ -293,15 +293,15 @@ function ImportWizardForm({
           {step === 2 && sheet && (
             <div className="import-body">
               <p>
-                Review the suggested column associations. These are local rules,
-                not an AI model.
+                Controlla le associazioni di colonna suggerite. Sono regole
+                locali, non un modello di IA.
               </p>
               <div className="import-map">
                 {mappings.map((mapping) => (
                   <div key={mapping.column}>
                     <strong>{sheet.headers[mapping.column]}</strong>
                     <select
-                      aria-label={`Field for ${sheet.headers[mapping.column]}`}
+                      aria-label={`Campo per ${sheet.headers[mapping.column]}`}
                       value={mapping.fieldId}
                       onChange={(event) =>
                         setMappings((current) =>
@@ -320,7 +320,7 @@ function ImportWizardForm({
                         )
                       }
                     >
-                      <option value="">Skip column</option>
+                      <option value="">Salta colonna</option>
                       {target ? (
                         target.fields.map((f) => (
                           <option key={f.id} value={f.id}>
@@ -334,7 +334,7 @@ function ImportWizardForm({
                       )}
                     </select>
                     <select
-                      aria-label={`Type for ${sheet.headers[mapping.column]}`}
+                      aria-label={`Tipo per ${sheet.headers[mapping.column]}`}
                       value={mapping.type}
                       disabled={Boolean(target)}
                       onChange={(event) =>
@@ -348,14 +348,14 @@ function ImportWizardForm({
                       }
                     >
                       {types.map((type) => (
-                        <option key={type}>{type}</option>
+                        <option key={type} value={type}>{({ text: "testo", number: "numero", currency: "valuta", date: "data", status: "stato", select: "selezione", checkbox: "casella" } as Record<string, string>)[type] ?? type}</option>
                       ))}
                     </select>
                   </div>
                 ))}
               </div>
               <label>
-                Duplicate check field
+                Campo per il controllo dei duplicati
                 <select
                   value={duplicateFieldId}
                   onChange={(event) => setDuplicateFieldId(event.target.value)}
@@ -371,33 +371,33 @@ function ImportWizardForm({
                 </select>
               </label>
               <p className="import-note">
-                Duplicates are skipped, never overwritten.
+                I duplicati vengono saltati, mai sovrascritti.
               </p>
             </div>
           )}
           {step === 3 && preview && (
             <div className="import-body">
-              <h3>Ready to import</h3>
+              <h3>Pronto per l'importazione</h3>
               {preview.error ? (
                 <p role="alert">{preview.error}</p>
               ) : (
                 preview.report && (
                   <>
                     <p>
-                      <strong>{preview.report.accepted}</strong> valid rows ·{" "}
-                      <strong>{preview.report.skipped}</strong> skipped rows ·{" "}
-                      {plan?.entityId ? "existing module" : "new module"}
+                      <strong>{preview.report.accepted}</strong> righe valide ·{" "}
+                      <strong>{preview.report.skipped}</strong> righe saltate ·{" "}
+                      {plan?.entityId ? "modulo esistente" : "nuovo modulo"}
                     </p>
                     <p>
-                      Confirming will save records and run applicable browser
-                      automations.
+                      Con la conferma i record verranno salvati e verranno
+                      eseguite le automazioni del browser applicabili.
                     </p>
                     {preview.report.issues.length > 0 && (
                       <div className="import-issues">
-                        <strong>Rows to skip</strong>
+                        <strong>Righe da saltare</strong>
                         {preview.report.issues.slice(0, 30).map((issue) => (
                           <p key={issue.row}>
-                            Row {issue.row}: {issue.reason}
+                            Riga {issue.row}: {issue.reason}
                           </p>
                         ))}
                       </div>
@@ -410,10 +410,10 @@ function ImportWizardForm({
           {step === 4 && result && (
             <div className="import-body import-finish">
               <Check />
-              <h3>Import saved</h3>
+              <h3>Importazione salvata</h3>
               <p>
-                {result.accepted} records imported; {result.skipped} rows
-                skipped.
+                {result.accepted} record importati; {result.skipped} righe
+                saltate.
               </p>
               {result.skipped > 0 && (
                 <button
@@ -422,7 +422,7 @@ function ImportWizardForm({
                     downloadText(issuesCsv, "nodus-import-issues.csv")
                   }
                 >
-                  Download skipped-row report
+                  Scarica il report delle righe saltate
                 </button>
               )}
             </div>
@@ -436,7 +436,7 @@ function ImportWizardForm({
                   setStep(step - 1);
                 }}
               >
-                Back
+                Indietro
               </button>
             )}
             <span />
@@ -446,7 +446,7 @@ function ImportWizardForm({
                 onClick={prepareMapping}
                 disabled={!entityId && !newModuleName.trim()}
               >
-                Map columns
+                Mappa le colonne
               </button>
             )}
             {step === 2 && (
@@ -458,7 +458,7 @@ function ImportWizardForm({
                 }}
                 disabled={!mappings.some((m) => m.fieldId)}
               >
-                Review import
+                Rivedi importazione
               </button>
             )}
             {step === 3 && (
@@ -467,12 +467,12 @@ function ImportWizardForm({
                 onClick={commit}
                 disabled={!preview?.report?.accepted}
               >
-                Confirm import
+                Conferma importazione
               </button>
             )}
             {step === 4 && (
               <button className="primary" onClick={onClose}>
-                Done
+                Fatto
               </button>
             )}
           </footer>

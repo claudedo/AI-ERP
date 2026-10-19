@@ -217,14 +217,14 @@ export function EntityTable({
             </span>
             <h1>{entity.name}</h1>
             <p>
-              {entity.records.length} records · {entity.fields.length} fields
+              {entity.records.length} record · {entity.fields.length} campi
             </p>
           </div>
           {canEdit && (
             <div className="heading-actions">
               <button className="secondary" onClick={onImport}>
                 <FileUp size={15} />
-                Import
+                Importa
               </button>
               {onSmartEntry && (
                 <button className="secondary" onClick={onSmartEntry}>
@@ -238,7 +238,7 @@ export function EntityTable({
                   onClick={() => setDrawer(null)}
                 >
                   <Plus />
-                  Add record
+                  Aggiungi record
                 </button>
               )}
             </div>
@@ -259,7 +259,7 @@ export function EntityTable({
               setSort(undefined);
             }}
           >
-            All {entity.name}
+            Tutti: {entity.name}
           </button>
           {existing.map((v) => (
             <button
@@ -282,12 +282,12 @@ export function EntityTable({
                   onClick={() => setSavingView(true)}
                 >
                   <BookmarkPlus />
-                  Save view
+                  Salva vista
                 </button>
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Content className="tooltip-content" sideOffset={6}>
-                  Save filters and columns
+                  Salva filtri e colonne
                   <Tooltip.Arrow />
                 </Tooltip.Content>
               </Tooltip.Portal>
@@ -299,14 +299,14 @@ export function EntityTable({
                 autoFocus
                 value={viewName}
                 onChange={(e) => setViewName(e.target.value)}
-                placeholder="View name"
-                aria-label="View name"
+                placeholder="Nome della vista"
+                aria-label="Nome della vista"
                 onKeyDown={(e) => e.key === "Enter" && saveView()}
               />
-              <button onClick={saveView} aria-label="Save">
+              <button onClick={saveView} aria-label="Salva">
                 <Check />
               </button>
-              <button onClick={() => setSavingView(false)} aria-label="Cancel">
+              <button onClick={() => setSavingView(false)} aria-label="Annulla">
                 <X />
               </button>
             </div>
@@ -319,8 +319,8 @@ export function EntityTable({
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${entity.name.toLowerCase()}...`}
-                aria-label={`Search ${entity.name.toLowerCase()}`}
+                placeholder={`Cerca in ${entity.name.toLowerCase()}…`}
+                aria-label={`Cerca in ${entity.name.toLowerCase()}`}
               />
             </div>
             <Popover.Root>
@@ -328,29 +328,29 @@ export function EntityTable({
                 <button
                   className={statusFilter ? "filter-chip" : ""}
                   aria-label={
-                    statusFilter ? `Filter, status ${statusFilter}` : "Filter"
+                    statusFilter ? `Filtra, stato ${statusFilter}` : "Filtra"
                   }
                 >
                   <Filter />
-                  Filter{statusFilter && <b>1</b>}
+                  Filtra{statusFilter && <b>1</b>}
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content className="popover" sideOffset={7} align="end">
-                  <label>Status</label>
+                  <label>Stato</label>
                   <Select
                     value={statusFilter}
                     onChange={setStatusFilter}
                     options={statuses}
-                    emptyLabel="All statuses"
-                    ariaLabel="Filter by status"
+                    emptyLabel="Tutti gli stati"
+                    ariaLabel="Filtra per stato"
                   />
                   {statusFilter && (
                     <button
                       className="popover-clear"
                       onClick={() => setStatusFilter("")}
                     >
-                      Clear filter
+                      Cancella filtro
                     </button>
                   )}
                   <Popover.Arrow className="popover-arrow" />
@@ -359,14 +359,14 @@ export function EntityTable({
             </Popover.Root>
             {delayedOnly && (
               <button className="filter-chip" onClick={onClearDelayed}>
-                Delayed only <X />
+                Solo in ritardo <X />
               </button>
             )}
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button>
                   <Columns3 />
-                  Columns <ChevronDown />
+                  Colonne <ChevronDown />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
@@ -399,7 +399,7 @@ export function EntityTable({
               <Popover.Trigger asChild>
                 <button className={extraFilters.length ? "filter-chip" : ""}>
                   <Filter />
-                  More filters
+                  Altri filtri
                   {extraFilters.length > 0 && <b>{extraFilters.length}</b>}
                 </button>
               </Popover.Trigger>
@@ -409,11 +409,11 @@ export function EntityTable({
                   sideOffset={7}
                   align="end"
                 >
-                  <strong>Combine conditions</strong>
+                  <strong>Combina condizioni</strong>
                   {extraFilters.map((filter, index) => (
                     <div className="filter-rule" key={index}>
                       <select
-                        aria-label={`Filter field ${index + 1}`}
+                        aria-label={`Campo del filtro ${index + 1}`}
                         value={filter.fieldId}
                         onChange={(event) =>
                           setExtraFilters((current) =>
@@ -432,7 +432,7 @@ export function EntityTable({
                         ))}
                       </select>
                       <select
-                        aria-label={`Filter operator ${index + 1}`}
+                        aria-label={`Operatore del filtro ${index + 1}`}
                         value={filter.operator}
                         onChange={(event) =>
                           setExtraFilters((current) =>
@@ -456,11 +456,11 @@ export function EntityTable({
                           "less-than",
                           "truthy",
                         ].map((operator) => (
-                          <option key={operator}>{operator}</option>
+                          <option key={operator} value={operator}>{{ equals: "è uguale a", "not-equals": "è diverso da", contains: "contiene", "greater-than": "maggiore di", "less-than": "minore di", truthy: "è valorizzato" }[operator]}</option>
                         ))}
                       </select>
                       <input
-                        aria-label={`Filter value ${index + 1}`}
+                        aria-label={`Valore del filtro ${index + 1}`}
                         value={String(filter.value ?? "")}
                         onChange={(event) =>
                           setExtraFilters((current) =>
@@ -473,7 +473,7 @@ export function EntityTable({
                         }
                       />
                       <button
-                        aria-label={`Remove filter ${index + 1}`}
+                        aria-label={`Rimuovi filtro ${index + 1}`}
                         onClick={() =>
                           setExtraFilters((current) =>
                             current.filter((_, i) => i !== index),
@@ -497,14 +497,14 @@ export function EntityTable({
                       ])
                     }
                   >
-                    + Add condition
+                    + Aggiungi condizione
                   </button>
                   {extraFilters.length > 0 && (
                     <button
                       className="popover-clear"
                       onClick={() => setExtraFilters([])}
                     >
-                      Clear conditions
+                      Cancella condizioni
                     </button>
                   )}
                 </Popover.Content>
@@ -514,7 +514,7 @@ export function EntityTable({
               <Popover.Trigger asChild>
                 <button>
                   <SortAsc />
-                  Sort
+                  Ordina
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
@@ -524,7 +524,7 @@ export function EntityTable({
                   align="end"
                 >
                   <label>
-                    Sort by
+                    Ordina per
                     <select
                       value={sort?.fieldId || ""}
                       onChange={(event) =>
@@ -538,7 +538,7 @@ export function EntityTable({
                         )
                       }
                     >
-                      <option value="">Original order</option>
+                      <option value="">Ordine originale</option>
                       {entity.fields.map((field) => (
                         <option key={field.id} value={field.id}>
                           {field.name}
@@ -556,8 +556,8 @@ export function EntityTable({
                       }
                     >
                       {sort.direction === "asc"
-                        ? "Ascending ↑"
-                        : "Descending ↓"}
+                        ? "Crescente ↑"
+                        : "Decrescente ↓"}
                     </button>
                   )}
                 </Popover.Content>
@@ -568,16 +568,16 @@ export function EntityTable({
                 onClick={download}
                 aria-label={
                   selected.size
-                    ? "Export selected records as CSV"
-                    : "Export filtered results as CSV"
+                    ? "Esporta i record selezionati in CSV"
+                    : "Esporta i risultati filtrati in CSV"
                 }
               >
                 <Download />
-                Export{selected.size ? ` (${selected.size})` : ""}
+                Esporta{selected.size ? ` (${selected.size})` : ""}
               </button>
             )}
           </div>
-          <div className="layout-strip" role="group" aria-label="Record layout">
+          <div className="layout-strip" role="group" aria-label="Layout dei record">
             {(["table", "list", "kanban", "calendar"] as ViewLayout[]).map(
               (mode) => {
                 const Icon =
@@ -603,15 +603,15 @@ export function EntityTable({
                     onClick={() => setLayout(mode)}
                   >
                     <Icon size={14} />
-                    {mode[0].toUpperCase() + mode.slice(1)}
+                    {{ table: "Tabella", list: "Elenco", kanban: "Kanban", calendar: "Calendario" }[mode]}
                   </button>
                 );
               },
             )}
             {selected.size > 0 && (
               <span>
-                {selected.size} selected{" "}
-                <button onClick={() => setSelected(new Set())}>Clear</button>
+                {selected.size} selezionati{" "}
+                <button onClick={() => setSelected(new Set())}>Deseleziona</button>
               </span>
             )}
           </div>
@@ -624,7 +624,7 @@ export function EntityTable({
                         {f.name}
                       </th>
                     ))}
-                  <th scope="col" aria-label="Row actions" />
+                  <th scope="col" aria-label="Azioni sulla riga" />
                 </tr>
               </thead>
               <tbody>
@@ -632,7 +632,7 @@ export function EntityTable({
                   <tr
                     key={r.id}
                     tabIndex={0}
-                    aria-label={`Open ${recordLabel(entity, r)}`}
+                    aria-label={`Apri ${recordLabel(entity, r)}`}
                     onClick={() => setDrawer(r)}
                     onKeyDown={(e) => {
                       if (
@@ -656,7 +656,7 @@ export function EntityTable({
                       <DropdownMenu.Root>
                         <DropdownMenu.Trigger asChild>
                           <button
-                            aria-label={`Actions for ${recordLabel(entity, r)}`}
+                            aria-label={`Azioni per ${recordLabel(entity, r)}`}
                           >
                             <MoreHorizontal size={15} />
                           </button>
@@ -673,7 +673,7 @@ export function EntityTable({
                               onSelect={() => setDrawer(r)}
                             >
                               <PanelRightOpen />
-                              {canEdit ? "Open & edit" : "Open record"}
+                              {canEdit ? "Apri e modifica" : "Apri record"}
                             </DropdownMenu.Item>
                             <DropdownMenu.Item
                               className="ds-menu-item"
@@ -681,8 +681,8 @@ export function EntityTable({
                             >
                               <Check />
                               {selected.has(r.id)
-                                ? "Remove selection"
-                                : "Select for export"}
+                                ? "Rimuovi selezione"
+                                : "Seleziona per l'esportazione"}
                             </DropdownMenu.Item>
                             {statusField && r[statusField.id] != null && r[statusField.id] !== "" && (
                               <DropdownMenu.Item
@@ -692,7 +692,7 @@ export function EntityTable({
                                 }
                               >
                                 <ListFilter />
-                                Show only “{String(r[statusField.id])}”
+                                Mostra solo “{String(r[statusField.id])}”
                               </DropdownMenu.Item>
                             )}
                           </DropdownMenu.Content>
@@ -706,8 +706,8 @@ export function EntityTable({
             {rows.length === 0 && (
               <div className="empty-state">
                 <Search />
-                <h3>No records found</h3>
-                <p>Try clearing filters or use a different search.</p>
+                <h3>Nessun record trovato</h3>
+                <p>Prova a rimuovere i filtri o usa un'altra ricerca.</p>
                 <button
                   className="secondary"
                   onClick={() => {
@@ -717,7 +717,7 @@ export function EntityTable({
                     if (delayedOnly) onClearDelayed();
                   }}
                 >
-                  Clear search and filters
+                  Cancella ricerca e filtri
                 </button>
               </div>
             )}
@@ -735,15 +735,15 @@ export function EntityTable({
           )}
           <div className="table-footer">
             <span>
-              Showing {rows.length} of {entity.records.length} records
+              {rows.length} di {entity.records.length} record
             </span>
-            {layout === "table" && pagination.pages > 1 && <nav className="table-pagination" aria-label="Record pages"><button className="secondary" disabled={pagination.page === 0} onClick={() => pagination.setPage(pagination.page - 1)} aria-label="Previous page">←</button><span role="status" aria-live="polite">{pagination.start}–{pagination.end} · {pagination.page + 1}/{pagination.pages}</span><button className="secondary" disabled={pagination.page + 1 === pagination.pages} onClick={() => pagination.setPage(pagination.page + 1)} aria-label="Next page">→</button></nav>}
+            {layout === "table" && pagination.pages > 1 && <nav className="table-pagination" aria-label="Pagine dei record"><button className="secondary" disabled={pagination.page === 0} onClick={() => pagination.setPage(pagination.page - 1)} aria-label="Pagina precedente">←</button><span role="status" aria-live="polite">{pagination.start}–{pagination.end} · {pagination.page + 1}/{pagination.pages}</span><button className="secondary" disabled={pagination.page + 1 === pagination.pages} onClick={() => pagination.setPage(pagination.page + 1)} aria-label="Pagina successiva">→</button></nav>}
             <span>
               {
                 workspace.relations.filter((r) => r.fromEntityId === entity.id)
                   .length
               }{" "}
-              linked data relationships
+              relazioni tra dati collegati
             </span>
           </div>
         </div>

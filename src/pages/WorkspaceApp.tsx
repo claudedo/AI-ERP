@@ -70,11 +70,11 @@ const iconFor = (name: string) =>
   );
 const industryLabel = (industry: string) =>
   ({
-    fashion: "Fashion",
-    furniture: "Furniture",
-    realestate: "Real estate",
-    consulting: "Consulting",
-    generic: "General",
+    fashion: "Moda",
+    furniture: "Arredamento",
+    realestate: "Immobiliare",
+    consulting: "Consulenza",
+    generic: "Generale",
   })[
     industry as
       "fashion" | "furniture" | "realestate" | "consulting" | "generic"
@@ -172,7 +172,7 @@ export function WorkspaceApp({
   };
   const commit = (next: Workspace, message: string) => {
     if (!setWorkspace(next)) {
-      notify("Workspace could not be saved. No changes were committed.", true);
+      notify("Impossibile salvare il workspace. Nessuna modifica applicata.", true);
       return false;
     }
     notify(message);
@@ -184,12 +184,12 @@ export function WorkspaceApp({
       return commit(
         upsertRecord(workspace, entity.id, record),
         entity.records.some((r) => r.id === record.id)
-          ? "Record updated"
-          : "Record created",
+          ? "Record aggiornato"
+          : "Record creato",
       );
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "Record could not be saved.",
+        error instanceof Error ? error.message : "Impossibile salvare il record.",
         true,
       );
       return false;
@@ -203,14 +203,14 @@ export function WorkspaceApp({
         .map((a) => a.id);
       const saved = commit(
         removeRecord(workspace, entity.id, id),
-        "Record deleted; incoming links cleared",
+        "Record eliminato; collegamenti in entrata rimossi",
       );
       if (saved)
         attachmentIds.forEach(
           (attachmentId) =>
             void removeAttachmentBlob(attachmentId).catch(() =>
               notify(
-                "A deleted record’s file could not be removed from this browser.",
+                "Impossibile rimuovere da questo browser il file di un record eliminato.",
                 true,
               ),
             ),
@@ -218,7 +218,7 @@ export function WorkspaceApp({
       return saved;
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "Record could not be deleted.",
+        error instanceof Error ? error.message : "Impossibile eliminare il record.",
         true,
       );
       return false;
@@ -226,10 +226,10 @@ export function WorkspaceApp({
   };
   const saveView = (view: View) => {
     try {
-      return commit(persistView(workspace, view), "View saved");
+      return commit(persistView(workspace, view), "Vista salvata");
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "View could not be saved.",
+        error instanceof Error ? error.message : "Impossibile salvare la vista.",
         true,
       );
       return false;
@@ -240,11 +240,11 @@ export function WorkspaceApp({
     try {
       return commit(
         addComment(workspace, entity.id, recordId, body),
-        "Comment saved",
+        "Commento salvato",
       );
     } catch (error) {
       notify(
-        error instanceof Error ? error.message : "Comment could not be saved.",
+        error instanceof Error ? error.message : "Impossibile salvare il commento.",
         true,
       );
       return false;
@@ -265,7 +265,7 @@ export function WorkspaceApp({
       await saveAttachmentBlob(attachment.id, file);
       const saved = commit(
         addAttachment(workspace, attachment),
-        "Attachment saved",
+        "Allegato salvato",
       );
       if (!saved) await removeAttachmentBlob(attachment.id);
       return saved;
@@ -274,7 +274,7 @@ export function WorkspaceApp({
       notify(
         error instanceof Error
           ? error.message
-          : "Attachment could not be saved.",
+          : "Impossibile salvare l’allegato.",
         true,
       );
       return false;
@@ -284,18 +284,18 @@ export function WorkspaceApp({
     try {
       const saved = commit(
         removeAttachment(workspace, attachmentId),
-        "Attachment removed",
+        "Allegato rimosso",
       );
       if (saved)
         void removeAttachmentBlob(attachmentId).catch(() =>
-          notify("File could not be removed from this browser.", true),
+          notify("Impossibile rimuovere il file da questo browser.", true),
         );
       return saved;
     } catch (error) {
       notify(
         error instanceof Error
           ? error.message
-          : "Attachment could not be removed.",
+          : "Impossibile rimuovere l’allegato.",
         true,
       );
       return false;
@@ -326,7 +326,7 @@ export function WorkspaceApp({
     });
   const switchUser = (id: string) => {
     setWorkspace({ ...workspace, currentUserId: id });
-    notify("Demo user switched");
+    notify("Utente demo cambiato");
   };
 
   // Desktop shortcuts: ⌘/ searches records; ⌘K opens commands; Esc closes mobile navigation.
@@ -383,17 +383,17 @@ export function WorkspaceApp({
           className={`sidebar ${mobileNav ? "open" : ""}`}
           role={mobileNav ? "dialog" : undefined}
           aria-modal={mobileNav ? true : undefined}
-          aria-label="Workspace navigation"
+          aria-label="Navigazione del workspace"
         >
           <div className="sidebar-brand">
             <div className="brand-copy">
               <NodusLogo variant="lockup" />
-              <small>CONNECTED OPERATIONS</small>
+              <small>OPERAZIONI CONNESSE</small>
             </div>
             <button
               ref={closeNavRef}
               className="mobile-close"
-              aria-label="Close navigation"
+              aria-label="Chiudi navigazione"
               onClick={() => setMobileNav(false)}
             >
               <X />
@@ -401,13 +401,13 @@ export function WorkspaceApp({
           </div>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="workspace-switch" aria-label="Workspace menu">
+              <button className="workspace-switch" aria-label="Menu del workspace">
                 <div className="company-avatar">
                   {workspace.companyName.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <strong>{workspace.companyName}</strong>
-                  <small>{industryLabel(workspace.industry)} workspace</small>
+                  <small>workspace {industryLabel(workspace.industry)}</small>
                 </div>
                 <ChevronsUpDown size={14} />
               </button>
@@ -434,28 +434,28 @@ export function WorkspaceApp({
                   onSelect={() => go("automations")}
                 >
                   <Zap />
-                  Automations
+                  Automazioni
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="ds-menu-item"
                   onSelect={() => go("approvals")}
                 >
                   <ShieldCheck />
-                  Approvals
+                  Approvazioni
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="ds-menu-item"
                   onSelect={() => go("users")}
                 >
                   <UserCog />
-                  Users & roles
+                  Utenti e ruoli
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="ds-menu-item"
                   onSelect={() => go("history")}
                 >
                   <History />
-                  AI change history
+                  Cronologia modifiche
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="ds-menu-sep" />
                 <DropdownMenu.Item
@@ -463,14 +463,14 @@ export function WorkspaceApp({
                   onSelect={() => setConfirmReset(true)}
                 >
                   <RotateCcw />
-                  Reset demo…
+                  Reimposta demo…
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
           <nav>
             {navItem("dashboard", <LayoutDashboard />, "Dashboard")}
-            <div className="nav-label">Modules</div>
+            <div className="nav-label">Moduli</div>
             {workspace.entities
               .filter((e) => !e.archived)
               .map((e, index, visible) => (
@@ -488,17 +488,17 @@ export function WorkspaceApp({
                   )}
                 </div>
               ))}
-            <div className="nav-label">Manage</div>
+            <div className="nav-label">Gestisci</div>
             {navItem(
               "automations",
               <Zap />,
-              "Automations",
+              "Automazioni",
               <em>{workspace.workflows.filter((w) => w.active).length}</em>,
             )}
             {navItem(
               "approvals",
               <ShieldCheck />,
-              "Approvals",
+              "Approvazioni",
               <em>
                 {
                   (workspace.approvals || []).filter(
@@ -507,18 +507,18 @@ export function WorkspaceApp({
                 }
               </em>,
             )}
-            {navItem("users", <UserCog />, "Users & roles")}
-            {navItem("history", <History />, "AI change history")}
+            {navItem("users", <UserCog />, "Utenti e ruoli")}
+            {navItem("history", <History />, "Cronologia modifiche")}
           </nav>
           <div className="sidebar-bottom">
             <button onClick={onConnected}>
               <Users />
-              <span>Connected workspace</span>
+              <span>Workspace condiviso</span>
             </button>
             {permissions.editStructure && (
               <button onClick={onBuilder}>
                 <Blocks />
-                <span>Visual Builder</span>
+                <span>Editor visivo</span>
               </button>
             )}
             <button onClick={() => openAssistant("operator")}>
@@ -530,7 +530,7 @@ export function WorkspaceApp({
               onClick={() => setConfirmReset(true)}
             >
               <RotateCcw />
-              <span>Reset demo</span>
+              <span>Reimposta demo</span>
             </button>
             <div className="user">
               <div className="avatar">{currentUser.initials}</div>
@@ -540,7 +540,7 @@ export function WorkspaceApp({
               </div>
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button aria-label="Account menu">
+                  <button aria-label="Menu account">
                     <MoreHorizontal size={16} />
                   </button>
                 </DropdownMenu.Trigger>
@@ -553,7 +553,7 @@ export function WorkspaceApp({
                     collisionPadding={8}
                   >
                     <DropdownMenu.Label className="ds-menu-label">
-                      Preview as demo user
+                      Visualizza come utente demo
                     </DropdownMenu.Label>
                     <DropdownMenu.RadioGroup
                       value={currentUser.id}
@@ -584,14 +584,14 @@ export function WorkspaceApp({
                       onSelect={() => go("users")}
                     >
                       <UserCog />
-                      Users & roles
+                      Utenti e ruoli
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
                       className="ds-menu-item danger"
                       onSelect={() => setConfirmReset(true)}
                     >
                       <LogOut />
-                      Leave demo…
+                      Esci dalla demo…
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -604,7 +604,7 @@ export function WorkspaceApp({
             <button
               ref={menuButtonRef}
               className="menu-btn"
-              aria-label="Open navigation"
+              aria-label="Apri navigazione"
               aria-controls="workspace-navigation"
               aria-expanded={mobileNav}
               onClick={() => setMobileNav(true)}
@@ -625,8 +625,8 @@ export function WorkspaceApp({
                     );
                   if (e.key === "Escape") setGlobalQuery("");
                 }}
-                placeholder="Search anything..."
-                aria-label="Search all workspace records"
+                placeholder="Cerca in tutto il workspace…"
+                aria-label="Cerca in tutti i record del workspace"
                 aria-controls={
                   globalQuery.trim() ? "workspace-search-results" : undefined
                 }
@@ -638,7 +638,7 @@ export function WorkspaceApp({
                   id="workspace-search-results"
                   className="global-search-results"
                   role="region"
-                  aria-label="Search results"
+                  aria-label="Risultati della ricerca"
                 >
                   {searchResults.length ? (
                     searchResults.map(({ entity, record }) => (
@@ -651,30 +651,30 @@ export function WorkspaceApp({
                       </button>
                     ))
                   ) : (
-                    <p role="status">No matching records</p>
+                    <p role="status">Nessun record trovato</p>
                   )}
                 </div>
               )}
             </div>
             <div className="permission-badge">
               <span>{role.name}</span>
-              {!permissions.editRecords && <small>Read only</small>}
+              {!permissions.editRecords && <small>Sola lettura</small>}
             </div>
             <div className="top-actions">
-              <Hint label="Command palette" shortcut="⌘K">
+              <Hint label="Comandi" shortcut="⌘K">
                 <button
                   className="icon-button"
-                  aria-label="Open command palette"
+                  aria-label="Apri comandi"
                   onClick={() => setPaletteOpen(true)}
                 >
                   <Command />
                 </button>
               </Hint>
               {permissions.editRecords && (
-                <Hint label="Import CSV or Excel">
+                <Hint label="Importa CSV o Excel">
                   <button
                     className="icon-button"
-                    aria-label="Import CSV or Excel"
+                    aria-label="Importa CSV o Excel"
                     onClick={() => setImportOpen(true)}
                   >
                     <FileUp />
@@ -682,10 +682,10 @@ export function WorkspaceApp({
                 </Hint>
               )}
               <Popover.Root>
-                <Hint label="Notifications">
+                <Hint label="Notifiche">
                   <Popover.Trigger asChild>
                     <button
-                      aria-label={`Notifications, ${notificationCount} items`}
+                      aria-label={`Notifiche, ${notificationCount} elementi`}
                       className="icon-button"
                     >
                       <Bell />
@@ -703,11 +703,11 @@ export function WorkspaceApp({
                     collisionPadding={8}
                   >
                     <div className="notif-head">
-                      <strong>Needs attention</strong>
+                      <strong>Da gestire</strong>
                       <span>{notificationCount}</span>
                     </div>
                     {notificationCount === 0 ? (
-                      <p className="notif-empty">You’re all caught up.</p>
+                      <p className="notif-empty">Nessuna novità.</p>
                     ) : (
                       <>
                         {visibleNotifications.slice(0, 6).map((n) => (
@@ -755,7 +755,7 @@ export function WorkspaceApp({
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
-              <Hint label="Ask your workspace">
+              <Hint label="Chiedi al tuo workspace">
                 <button
                   className="assistant-top"
                   onClick={() => openAssistant("operator")}
@@ -771,7 +771,7 @@ export function WorkspaceApp({
           </header>
           {storageError && (
             <div className="storage-banner" role="alert">
-              {storageError} Changes remain unsaved in this browser.
+              {storageError} Le modifiche restano non salvate in questo browser.
             </div>
           )}
           {active === "dashboard" && (
@@ -784,13 +784,13 @@ export function WorkspaceApp({
                 try {
                   return commit(
                     saveDashboardWidgets(workspace, widgets),
-                    "Dashboard updated",
+                    "Dashboard aggiornata",
                   );
                 } catch (error) {
                   notify(
                     error instanceof Error
                       ? error.message
-                      : "Dashboard could not be updated.",
+                      : "Impossibile aggiornare la dashboard.",
                     true,
                   );
                   return false;
@@ -845,12 +845,12 @@ export function WorkspaceApp({
               onCreate={() => openAssistant("builder")}
               onToggle={(id) => {
                 try {
-                  commit(toggleWorkflow(workspace, id), "Automation updated");
+                  commit(toggleWorkflow(workspace, id), "Automazione aggiornata");
                 } catch (error) {
                   notify(
                     error instanceof Error
                       ? error.message
-                      : "Automation could not be updated.",
+                      : "Impossibile aggiornare l’automazione.",
                     true,
                   );
                 }
@@ -859,13 +859,13 @@ export function WorkspaceApp({
                 try {
                   return commit(
                     saveWorkflow(workspace, flow),
-                    "Workflow created",
+                    "Workflow creato",
                   );
                 } catch (error) {
                   notify(
                     error instanceof Error
                       ? error.message
-                      : "Workflow could not be created.",
+                      : "Impossibile creare il workflow.",
                     true,
                   );
                   return false;
@@ -882,13 +882,13 @@ export function WorkspaceApp({
                 try {
                   return commit(
                     decideApproval(workspace, id, status),
-                    `Approval ${status}`,
+                    `Approvazione ${status === "approved" ? "approvata" : "rifiutata"}`,
                   );
                 } catch (error) {
                   notify(
                     error instanceof Error
                       ? error.message
-                      : "Approval could not be updated.",
+                      : "Impossibile aggiornare l’approvazione.",
                     true,
                   );
                   return false;
@@ -911,13 +911,13 @@ export function WorkspaceApp({
                 try {
                   return commit(
                     undoAiChange(workspace, id),
-                    "AI change undone",
+                    "Modifica AI annullata",
                   );
                 } catch (error) {
                   notify(
                     error instanceof Error
                       ? error.message
-                      : "Undo is unavailable.",
+                      : "Impossibile annullare.",
                     true,
                   );
                   return false;
@@ -979,7 +979,7 @@ export function WorkspaceApp({
             workspace={workspace}
             defaultEntityId={entity?.id}
             onClose={() => setImportOpen(false)}
-            onImport={(next) => commit(next, "Import saved")}
+            onImport={(next) => commit(next, "Importazione salvata")}
           />
         )}
         <AlertDialog.Root open={confirmReset} onOpenChange={setConfirmReset}>
@@ -987,18 +987,18 @@ export function WorkspaceApp({
             <AlertDialog.Overlay className="alert-overlay" />
             <AlertDialog.Content className="confirm-box">
               <RotateCcw />
-              <AlertDialog.Title>Reset the demo workspace?</AlertDialog.Title>
+              <AlertDialog.Title>Reimpostare il workspace demo?</AlertDialog.Title>
               <AlertDialog.Description>
-                All records, views and AI changes saved in this browser will be
-                removed and you’ll return to onboarding.
+                Tutti i record, le viste e le modifiche AI salvati in questo browser
+                verranno rimossi e tornerai all’onboarding.
               </AlertDialog.Description>
               <div>
                 <AlertDialog.Cancel asChild>
-                  <button className="secondary">Cancel</button>
+                  <button className="secondary">Annulla</button>
                 </AlertDialog.Cancel>
                 <AlertDialog.Action asChild>
                   <button className="danger-solid" onClick={onReset}>
-                    Reset demo
+                    Reimposta demo
                   </button>
                 </AlertDialog.Action>
               </div>
@@ -1041,9 +1041,9 @@ function HistoryPage({
       <div className="page-heading">
         <div>
           <span className="overline">WORKSPACE / GOVERNANCE</span>
-          <h1>AI change history</h1>
+          <h1>Cronologia modifiche</h1>
           <p>
-            A transparent record of proposed and applied structural changes.
+            Registro trasparente delle modifiche strutturali proposte e applicate.
           </p>
         </div>
       </div>
@@ -1057,18 +1057,18 @@ function HistoryPage({
               <h3>{change.summary}</h3>
               <p>“{change.command}”</p>
               <small>
-                {new Date(change.at).toLocaleString("en-GB")} ·{" "}
+                {new Date(change.at).toLocaleString("it-IT")} ·{" "}
                 {workspace.users.find((user) => user.id === change.userId)
-                  ?.name || "User"}
+                  ?.name || "Utente"}
               </small>
             </div>
-            <em>{change.status}</em>
+            <em>{({ applied: "applicata", rejected: "rifiutata", proposed: "proposta" } as Record<string, string>)[change.status] ?? change.status}</em>
             {canUndo &&
               change.status === "applied" &&
               change.appliedRevision === (workspace.revision || 0) &&
               reversible.has(change.action || "") && (
                 <button className="secondary" onClick={() => onUndo(change.id)}>
-                  Undo
+                  Annulla
                 </button>
               )}
           </article>
@@ -1076,8 +1076,8 @@ function HistoryPage({
         {workspace.changeHistory.length === 0 && (
           <div className="empty-state">
             <History />
-            <h3>No AI changes yet</h3>
-            <p>Confirmed Builder changes will be recorded here.</p>
+            <h3>Nessuna modifica AI</h3>
+            <p>Le modifiche confermate dall’editor verranno registrate qui.</p>
           </div>
         )}
       </div>
@@ -1085,8 +1085,8 @@ function HistoryPage({
         <div>
           <History />
           <div>
-            <h3>Workspace activity</h3>
-            <p>Manual, import, AI and browser automation actions</p>
+            <h3>Attività del workspace</h3>
+            <p>Azioni manuali, di importazione, AI e di automazione nel browser</p>
           </div>
         </div>
       </div>
@@ -1097,16 +1097,16 @@ function HistoryPage({
             <div>
               <h3>{entry.summary}</h3>
               <small>
-                {new Date(entry.at).toLocaleString("en-GB")} · {entry.source} ·{" "}
+                {new Date(entry.at).toLocaleString("it-IT")} · {entry.source} ·{" "}
                 {workspace.users.find((user) => user.id === entry.userId)
-                  ?.name || "User"}
+                  ?.name || "Utente"}
               </small>
             </div>
           </article>
         ))}
         {!(workspace.activity || []).length && (
           <div className="empty-state">
-            <p>No activity recorded yet.</p>
+            <p>Nessuna attività registrata.</p>
           </div>
         )}
       </div>

@@ -11,14 +11,14 @@ export function chatErrorMessage(cause: unknown): string {
     [/^(.+) is already linked to another record\.$/, "$1 è già collegato a un altro record."],
   ];
   for (const [pattern, replacement] of rules) if (pattern.test(message)) return message.replace(pattern, replacement);
-  if (/permission|role.*(?:allow|valid)|access denied/i.test(message)) return "I tuoi permessi non consentono questa operazione. Nessuna modifica applicata.";
+  if (/permission|role.*(?:allow|valid)|access denied|non ha un ruolo valido|ruolo demo non/i.test(message)) return "I tuoi permessi non consentono questa operazione. Nessuna modifica applicata.";
   if (/admin/i.test(message)) return "Questa modifica richiede un amministratore.";
-  if (/stale|revision|workspace.*changed|later workspace change/i.test(message)) return "Il workspace è cambiato. La bozza è conservata: verifica i dati e rigenera la proposta prima di confermare.";
-  if (/save failed|could not be saved|salvataggio/i.test(message)) return "Salvataggio non riuscito. La proposta è conservata: verifica il workspace e riprova.";
+  if (/stale|revision|workspace.*changed|later workspace change|non è più aggiornata|ulteriori modifiche|altra scheda/i.test(message)) return "Il workspace è cambiato. La bozza è conservata: verifica i dati e rigenera la proposta prima di confermare.";
+  if (/save failed|could not be saved|salvataggio|impossibile salvare/i.test(message)) return "Salvataggio non riuscito. La proposta è conservata: verifica il workspace e riprova.";
   if (/sign in|session expired|organization access/i.test(message)) return "Sessione non valida o accesso non consentito. Accedi di nuovo al workspace.";
   if (/^Choose another name/.test(message)) return "Scegli un altro nome per il campo: l’identificativo è riservato.";
   if (/^Select a unique target module/.test(message)) return "Scegli un modulo di destinazione univoco per la relazione.";
-  if (/required|missing|schema|invalid|ZodError/i.test(`${message} ${cause instanceof Error ? cause.name : ""}`)) return "La proposta non è valida. Verifica campi obbligatori, valori e collegamenti prima di confermare.";
-  if (/\b(?:non|nessun|nessuna|proposta|richiesta|workspace è|modulo|bozza|indica|verifica|permessi|scegli|specifica|troppe|errore)\b/i.test(message)) return message.slice(0, 1000);
+  if (/required|missing|schema|invalid|ZodError|inesistent|obbligatori|non valid|duplicat/i.test(`${message} ${cause instanceof Error ? cause.name : ""}`)) return "La proposta non è valida. Verifica campi obbligatori, valori e collegamenti prima di confermare.";
+  if (/\b(?:non|nessun|nessuna|proposta|richiesta|workspace è|modulo|bozza|indica|verifica|permessi|scegli|specifica|troppe|errore|deve|impossibile|esiste|esistono|elimina|annulla|ambiguità|bozza|campo|campi)\b/i.test(message)) return message.slice(0, 1000);
   return "Operazione non riuscita. Nessuna modifica applicata: verifica i dati e riprova.";
 }

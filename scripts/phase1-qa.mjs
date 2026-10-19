@@ -76,7 +76,7 @@ try {
       assert.equal(await evaluate("JSON.parse(localStorage.getItem('ai-business-os-workspace')).entities.find(e=>e.id==='properties').records[0].title"), "Casa test");
     });
     await test(`${width}px: relation search opens the exact record`, async () => {
-      await load(); await input('[aria-label="Search all workspace records"]', "Rossi"); await until("!!document.querySelector('.global-search-results button')");
+      await load(); await input('[aria-label="Cerca in tutti i record del workspace"]', "Rossi"); await until("!!document.querySelector('.global-search-results button')");
       await evaluate("document.querySelector('.global-search-results button').click()"); await pause(150);
       assert.equal(await evaluate("document.querySelector('.record-drawer h2')?.innerText"), "Casa test");
     });
@@ -95,10 +95,10 @@ try {
     assert(await evaluate("!!document.querySelector('.discovery')"));
   });
   await test("archived records are absent from global search and command palette", async () => {
-    await load(); await input('[aria-label="Search all workspace records"]', "Ghost"); await pause(100);
+    await load(); await input('[aria-label="Cerca in tutti i record del workspace"]', "Ghost"); await pause(100);
     assert.equal(await evaluate("document.querySelectorAll('.global-search-results button').length"), 0);
     await send("Input.dispatchKeyEvent", { type: "keyDown", key: "k", code: "KeyK", modifiers: 4 });
-    await until("!!document.querySelector('[aria-label=\"Search commands\"]')"); await input('[aria-label="Search commands"]', "Ghost"); await pause(100);
+    await until("!!document.querySelector('[aria-label=\"Cerca comandi\"]')"); await input('[aria-label="Cerca comandi"]', "Ghost"); await pause(100);
     assert.equal(await evaluate("document.querySelectorAll('.command-results button').length"), 0);
   });
   assert.deepEqual(errors, [], "Runtime exceptions");

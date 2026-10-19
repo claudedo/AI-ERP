@@ -196,8 +196,8 @@ try {
     );
     await reload();
     await nav("Aziende");
-    await click("Add record");
-    await click("Save record");
+    await click("Aggiungi record");
+    await click("Salva record");
     check(
       "blank company rejected",
       (await text()).toLowerCase().includes("ragione sociale"),
@@ -205,7 +205,7 @@ try {
     await field("Ragione sociale", "QA Studio Élite");
     await choose("Tipo", "Entrambi");
     await field("Partita IVA", "IT98765432100");
-    await click("Save record");
+    await click("Salva record");
     check(
       "company saved",
       (await state()).entities
@@ -231,7 +231,7 @@ try {
         "QA Studio",
       ),
     );
-    await click("All Aziende");
+    await click("Tutti: Aziende");
     await ev(
       '[...document.querySelectorAll("tbody tr")].find(r=>r.innerText.includes("QA Studio")).click()',
     );
@@ -263,7 +263,7 @@ try {
     await field("Nome", "QA Marco");
     await field("Cognome", "Bianchi");
     await field("Email", "qa.marco@example.test");
-    await click("Save record");
+    await click("Salva record");
     check(
       "linked contact saved",
       (await state()).entities
@@ -274,7 +274,7 @@ try {
     await click("Aggiungi sede");
     await field("Etichetta", "QA Sede legale");
     await field("Città", "Milano");
-    await click("Save record");
+    await click("Salva record");
     check(
       "linked site saved",
       (await state()).entities
@@ -283,9 +283,9 @@ try {
     );
     await key("Escape");
     await nav("Tasks");
-    await click("Add record");
+    await click("Aggiungi record");
     await field("Task", "QA Senza categoria");
-    await click("Save record");
+    await click("Salva record");
     await click("Kanban");
     check(
       "unassigned lane visible",
@@ -304,7 +304,7 @@ try {
       "browser forward works",
       (await text()).includes("WORKSPACE / PROJECTS"),
     );
-    await nav("Users & roles");
+    await nav("Utenti e ruoli");
     await ev('document.querySelectorAll(".user-card")[3].click()');
     await wait(150);
     await nav("Aziende");
@@ -312,7 +312,7 @@ try {
       "Viewer no Smart Entry",
       !(await text()).includes("Inserisci con AI"),
     );
-    await nav("Users & roles");
+    await nav("Utenti e ruoli");
     await ev('document.querySelectorAll(".user-card")[0].click()');
     await wait(150);
   }
@@ -320,7 +320,7 @@ try {
     if (await ev('!!document.querySelector(".smart-entry")'))
       await click("Chiudi inserimento");
     await nav("Aziende");
-    await click("Add record");
+    await click("Aggiungi record");
     await field("Ragione sociale", "QA Guard Save");
     await choose("Tipo", "Cliente");
     await key("Escape");
@@ -332,19 +332,19 @@ try {
         .records.some((r) => r.name === "QA Guard Save"),
     );
     check(
-      "focus returns to Add record",
-      (await ev("document.activeElement.innerText")) === "Add record",
+      "focus returns to Aggiungi record",
+      (await ev("document.activeElement.innerText")) === "Aggiungi record",
     );
-    await click("Add record");
+    await click("Aggiungi record");
     await field("Ragione sociale", "QA VAT Duplicate");
     await choose("Tipo", "Fornitore");
     await field("Partita IVA", "12345678901");
-    await click("Save record");
+    await click("Salva record");
     check(
       "duplicate VAT rejected in UI",
       (await text()).includes("Partita IVA già presente"),
     );
-    await click("Cancel");
+    await click("Annulla");
     await click("Scarta modifiche");
     await click("Inserisci con AI");
     await field("Testo", "Crea un ordine per il cliente Rossi Srl");

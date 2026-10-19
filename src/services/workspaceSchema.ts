@@ -24,14 +24,14 @@ export const storedWorkspaceSchema = z.object({
   dashboardWidgets: z.array(z.object({ id, kind: z.enum(["record-count", "sum", "status", "assigned", "due", "approvals"]) })).optional(),
 }).superRefine((workspace, ctx) => {
   const user = workspace.users.find(u => u.id === workspace.currentUserId);
-  if (!user || !workspace.roles.some(role => role.id === user.roleId)) ctx.addIssue({ code: "custom", message: "Current workspace user has no valid role." });
-  if (new Set(workspace.entities.map(e => e.id)).size !== workspace.entities.length) ctx.addIssue({ code: "custom", message: "Duplicate module identifiers." });
+  if (!user || !workspace.roles.some(role => role.id === user.roleId)) ctx.addIssue({ code: "custom", message: "L’utente corrente del workspace non ha un ruolo valido." });
+  if (new Set(workspace.entities.map(e => e.id)).size !== workspace.entities.length) ctx.addIssue({ code: "custom", message: "Identificativi dei moduli duplicati." });
   for (const entity of workspace.entities) {
-    if (new Set(entity.fields.map(f => f.id)).size !== entity.fields.length || new Set(entity.records.map(r => r.id)).size !== entity.records.length) ctx.addIssue({ code: "custom", message: "Duplicate field or record identifiers." });
+    if (new Set(entity.fields.map(f => f.id)).size !== entity.fields.length || new Set(entity.records.map(r => r.id)).size !== entity.records.length) ctx.addIssue({ code: "custom", message: "Identificativi di campi o record duplicati." });
   }
 });
 
 export function assertStoredWorkspace(value: unknown) {
   const result = storedWorkspaceSchema.safeParse(value);
-  if (!result.success) throw new Error("Saved workspace has invalid data. Download a backup before resetting or repairing it.");
+  if (!result.success) throw new Error("Il workspace salvato contiene dati non validi. Scarica un backup prima di ripristinarlo o ripararlo.");
 }

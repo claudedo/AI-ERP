@@ -223,54 +223,54 @@ export function getProposalInapplicability(
   switch (action.type) {
     case "add-priority":
       return !order
-        ? "Orders module is missing."
+        ? "Il modulo Orders non esiste."
         : order.fields.some((f) => f.id === "priority")
-          ? "Orders already has a Priority field."
+          ? "Orders ha già un campo Priority."
           : null;
     case "add-approval":
       return !order
-        ? "Orders module is missing."
+        ? "Il modulo Orders non esiste."
         : w.workflows.some((flow) => flow.id === "high-value-approval")
-          ? "The approval workflow already exists."
+          ? "Il workflow di approvazione esiste già."
           : null;
     case "add-order-customer-relation":
       if(w.entities.some(e=>e.id==="companies"))return "Gli ordini usano l’anagrafica unica Aziende. Configura i collegamenti nel Visual Builder senza duplicare clienti.";
       return !order
-        ? "Orders module is missing."
+        ? "Il modulo Orders non esiste."
         : order.fields.some(
               (f) =>
                 f.id === "customer" &&
                 f.type === "relation" &&
                 f.relationEntityId === "customers",
             ) && w.entities.some((e) => e.id === "customers")
-          ? "Orders is already connected to Customers."
+          ? "Orders è già collegato a Customers."
           : null;
     case "add-quality":
       return w.entities.some((e) => e.id === "quality-control")
-        ? "Quality Control module already exists."
+        ? "Il modulo Quality Control esiste già."
         : null;
     case "add-suppliers":
       if(w.entities.some(e=>e.id==="companies"))return "I fornitori sono nella vista Fornitori di Aziende. Aggiungi l’azienda con tipo Fornitore o Entrambi.";
       return w.entities.some((e) => e.id === "suppliers")
-        ? "Suppliers module already exists."
+        ? "Il modulo Suppliers esiste già."
         : null;
     case "add-status":
       return !order
-        ? "Orders module is missing."
+        ? "Il modulo Orders non esiste."
         : !order.fields.some((f) => f.id === "status")
-          ? "Orders has no Status field."
+          ? "Orders non ha un campo Status."
           : order.fields
                 .find((f) => f.id === "status")
                 ?.options?.includes("On hold")
-            ? "On hold is already an order status."
+            ? "On hold è già uno stato degli ordini."
             : null;
     case "add-view":
       return !order
-        ? "Orders module is missing."
+        ? "Il modulo Orders non esiste."
         : w.views.some(
               (v) => v.entityId === order.id && v.name === "Orders to review",
             )
-          ? "Orders to review already exists."
+          ? "La vista Orders to review esiste già."
           : null;
     default:
       return null;
@@ -288,85 +288,85 @@ export function createProposal(
   > = {
     "add-priority": {
       action: "add-priority",
-      title: "Add Priority to Orders",
-      summary: "Create a select field that teams can use to triage orders.",
+      title: "Aggiungi Priority a Orders",
+      summary: "Crea un campo a scelta che i team possono usare per classificare gli ordini.",
       details: [
-        "Field: Priority",
-        "Options: Low, Normal, High, Urgent",
-        "Existing records receive Normal",
+        "Campo: Priority",
+        "Opzioni: Low, Normal, High, Urgent",
+        "I record esistenti ricevono Normal",
       ],
-      impact: "No existing data will be removed.",
+      impact: "Nessun dato esistente verrà rimosso.",
       affectedEntityIds: [order?.id || "orders"],
     },
     "add-quality": {
       action: "add-quality",
-      title: "Create Quality Control module",
-      summary: "Add a structured inspection register connected to production.",
+      title: "Crea il modulo Quality Control",
+      summary: "Aggiungi un registro ispezioni strutturato, collegato alla produzione.",
       details: [
-        "Fields: Inspection, Production batch, Inspector, Due date, Status",
-        "Includes one sample inspection",
-        "Adds a Production → Quality Control relation",
+        "Campi: Inspection, Production batch, Inspector, Due date, Status",
+        "Include un’ispezione di esempio",
+        "Aggiunge una relazione Production → Quality Control",
       ],
-      impact: "A new module and relationship will be created.",
+      impact: "Verranno creati un nuovo modulo e una relazione.",
       affectedEntityIds: ["quality-control"],
     },
     "add-approval": {
       action: "add-approval",
-      title: "Create high-value order approval",
-      summary: "Require manager approval when an order exceeds €20,000.",
+      title: "Crea approvazione per ordini di valore elevato",
+      summary: "Richiedi l’approvazione di un manager quando un ordine supera 20.000 €.",
       details: [
-        "Trigger: Order value > €20,000",
-        "Actions: request approval, notify owner",
-        "Workflow starts active",
+        "Trigger: valore ordine > 20.000 €",
+        "Azioni: richiedi approvazione, avvisa il responsabile",
+        "Il workflow parte attivo",
       ],
-      impact: "Existing high-value orders may require approval.",
+      impact: "Gli ordini di valore elevato esistenti potrebbero richiedere approvazione.",
       affectedEntityIds: [order?.id || "orders"],
     },
     "add-suppliers": {
       action: "add-suppliers",
-      title: "Create Suppliers module",
-      summary: "Add a supplier directory ready for procurement workflows.",
+      title: "Crea il modulo Suppliers",
+      summary: "Aggiungi un elenco fornitori pronto per i workflow di acquisto.",
       details: [
-        "Fields: Name, Country, Payment terms, Status",
-        "Includes two sample suppliers",
+        "Campi: Name, Country, Payment terms, Status",
+        "Include due fornitori di esempio",
       ],
-      impact: "A new module will appear in the sidebar.",
+      impact: "Un nuovo modulo comparirà nella barra laterale.",
       affectedEntityIds: ["suppliers"],
     },
     "add-order-customer-relation": {
       action: "add-order-customer-relation",
-      title: "Connect Orders to Customers",
+      title: "Collega Orders a Customers",
       summary:
-        "Replace free-text customer values with linked customer records.",
+        "Sostituisci i valori cliente in testo libero con record cliente collegati.",
       details: [
-        "Adds Customer relation field to Orders",
-        "Creates Customers module if missing",
-        "Existing names are matched where possible",
+        "Aggiunge a Orders un campo relazione Customer",
+        "Crea il modulo Customers se mancante",
+        "I nomi esistenti vengono associati dove possibile",
       ],
-      impact: "Unmatched values remain visible and can be linked later.",
+      impact: "I valori non associati restano visibili e potranno essere collegati in seguito.",
       affectedEntityIds: [order?.id || "orders", "customers"],
     },
     "add-status": {
       action: "add-status",
-      title: "Add On hold order status",
-      summary: "Extend the existing order status choices.",
+      title: "Aggiungi lo stato ordine On hold",
+      summary: "Amplia le scelte di stato degli ordini esistenti.",
       details: [
-        "Adds On hold to Orders → Status",
-        "Existing record values are unchanged",
+        "Aggiunge On hold a Orders → Status",
+        "I valori dei record esistenti non cambiano",
       ],
-      impact: "No existing data will be removed.",
+      impact: "Nessun dato esistente verrà rimosso.",
       affectedEntityIds: [order?.id || "orders"],
     },
     "add-view": {
       action: "add-view",
-      title: "Create Orders to review view",
-      summary: "Save a focused order view using current fields.",
+      title: "Crea la vista Orders to review",
+      summary: "Salva una vista ordini mirata con i campi attuali.",
       details: [
-        "View: Orders to review",
-        "Shows current order columns",
-        "Sorted by Status",
+        "Vista: Orders to review",
+        "Mostra le colonne ordini attuali",
+        "Ordinata per Status",
       ],
-      impact: "No records will be changed.",
+      impact: "Nessun record verrà modificato.",
       affectedEntityIds: [order?.id || "orders"],
     },
   };
@@ -377,13 +377,13 @@ export function createProposal(
     !w.entities.some((e) => e.id === "production")
       ? {
           ...p,
-          summary: "Add a structured inspection register.",
+          summary: "Aggiungi un registro ispezioni strutturato.",
           details: [
-            "Fields: Inspection, Production batch, Inspector, Due date, Status",
-            "Includes one sample inspection",
-            "Production batch is stored as text because there is no Production module",
+            "Campi: Inspection, Production batch, Inspector, Due date, Status",
+            "Include un’ispezione di esempio",
+            "Production batch è salvato come testo perché non esiste il modulo Production",
           ],
-          impact: "A new module will be created.",
+          impact: "Verrà creato un nuovo modulo.",
         }
       : p;
   return {

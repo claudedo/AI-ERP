@@ -23,14 +23,14 @@ afterEach(() => vi.unstubAllGlobals());
 describe("audit: relation integrity and atomic batches", () => {
   it("blocks deletion of a required parent without changing the source", () => {
     const workspace = fixture(), before = JSON.stringify(workspace);
-    expect(() => deleteRecord(workspace, "parents", "p1")).toThrow(/requires this record/);
+    expect(() => deleteRecord(workspace, "parents", "p1")).toThrow(/richiede questo record/);
     expect(JSON.stringify(workspace)).toBe(before);
   });
   it("also protects conditional requirements", () => {
     const workspace = fixture(), entity = workspace.entities.find(e => e.id === "children")!;
     entity.fields[1].required = false;
     entity.fields[1].requiredWhen = { fieldId: "name", equals: "Existing" };
-    expect(() => deleteRecord(workspace, "parents", "p1")).toThrow(/requires this record/);
+    expect(() => deleteRecord(workspace, "parents", "p1")).toThrow(/richiede questo record/);
     entity.records[0].name = "Optional";
     expect(deleteRecord(workspace, "parents", "p1").entities.find(e => e.id === "children")!.records[0].parent).toBeNull();
   });
@@ -62,7 +62,7 @@ describe("audit: safe imports and exports", () => {
     const consent: ImportPlan = { ...plan(), entityId: "consents", sheet: { name: "CSV", headers: ["Consent"], rows: [["false"], ["true"]] }, mappings: [{ column: 0, fieldId: "consent", type: "checkbox" }], duplicateFieldId: "consent" };
     const preview = previewImport(consent, workspace);
     expect(preview.accepted).toBe(1);
-    expect(preview.issues[0].reason).toMatch(/required/);
+    expect(preview.issues[0].reason).toMatch(/obbligatorio/);
     expect(executeImport(consent, workspace).workspace.entities.find(e => e.id === "consents")!.records).toHaveLength(1);
   });
   it("validates one-to-one relations between accepted rows", () => {
@@ -71,11 +71,11 @@ describe("audit: safe imports and exports", () => {
     const input = plan("p2"); input.sheet.rows.push(["Another", "p2"]);
     const result = previewImport(input, workspace);
     expect(result.accepted).toBe(1);
-    expect(result.issues[0].reason).toMatch(/already linked/);
+    expect(result.issues[0].reason).toMatch(/già collegato/);
   });
   it("rejects reserved identifiers in new modules", () => {
     const input: ImportPlan = { ...plan(), entityId: undefined, newModuleName: "New module", mappings: [{ column: 0, fieldId: "id", type: "text" }] };
-    expect(() => previewImport(input, fixture())).toThrow(/reserved/);
+    expect(() => previewImport(input, fixture())).toThrow(/riservato/);
   });
   const exportEntity: Entity = { id: "x", name: "X", fields: [{ id: "name", name: "Name", type: "text" }, { id: "amount", name: "Amount", type: "currency" }], records: [] };
   it.each(["=1+1", "+SUM(A1)", "-1+1", "@SUM(A1)", "\t=1+1", "  =1+1", "\n=1+1"])("neutralizes spreadsheet formulas: %j", name => {
@@ -96,7 +96,7 @@ describe("audit: storage recovery and stale tabs", () => {
   it("rejects malformed current-version data without erasing it", () => {
     const raw = JSON.stringify({ version: 5, companyName: "Broken", entities: [] });
     localStorage.setItem(WORKSPACE_KEY, raw);
-    expect(() => repository.load()).toThrow(/invalid data/);
+    expect(() => repository.load()).toThrow(/dati non validi/);
     expect(repository.raw()).toBe(raw);
   });
   it("preserves unknown future-compatible properties", () => {
@@ -108,20 +108,20 @@ describe("audit: storage recovery and stale tabs", () => {
     const workspace = fixture();
     workspace.entities[0].records.push(workspace.entities[0].records[0]);
     repository.save(workspace);
-    expect(() => repository.load()).toThrow(/invalid data/);
+    expect(() => repository.load()).toThrow(/dati non validi/);
   });
   it("rejects stale writes from another tab, preserving the first edit", () => {
     repository.save(fixture());
     const snapshot = repository.raw(), first = repository.load()!, second = repository.load()!;
     repository.save(saveRecord(first, "parents", { id: "p1", name: "Updated A" }), snapshot);
-    expect(() => repository.save(saveRecord(second, "parents", { id: "p2", name: "Updated B" }), snapshot)).toThrow(/Another tab/);
+    expect(() => repository.save(saveRecord(second, "parents", { id: "p2", name: "Updated B" }), snapshot)).toThrow(/altra scheda/);
     expect(repository.load()!.entities.find(e => e.id === "parents")!.records[0].name).toBe("Updated A");
   });
   it("does not recreate data deleted in another tab", () => {
     repository.save(fixture());
     const snapshot = repository.raw(), next = repository.load()!;
     repository.clear();
-    expect(() => repository.save(next, snapshot)).toThrow(/Another tab/);
+    expect(() => repository.save(next, snapshot)).toThrow(/altra scheda/);
     expect(repository.raw()).toBeNull();
   });
 });

@@ -19,6 +19,36 @@ import { Dashboard } from "../components/Dashboard";
 import { WorkflowEditor } from "../components/WorkflowEditor";
 import { NodusLogo } from "../components/NodusLogo";
 
+const panelLabels: Record<string, string> = {
+  fields: "Campi",
+  layout: "Layout",
+  views: "Viste",
+  workflow: "Automazioni",
+  access: "Accessi",
+  advanced: "Avanzate",
+  ai: "AI",
+};
+const fieldTypeLabels: Record<string, string> = {
+  text: "Testo",
+  number: "Numero",
+  currency: "Valuta",
+  date: "Data",
+  status: "Stato",
+  select: "Selezione",
+  checkbox: "Casella di spunta",
+  relation: "Relazione",
+};
+const layoutLabels: Record<string, string> = {
+  table: "Tabella",
+  list: "Elenco",
+  kanban: "Kanban",
+  calendar: "Calendario",
+};
+const actionLabels: Record<string, string> = {
+  create: "Crea",
+  export: "Esporta",
+};
+
 type Props = {
   workspace: Workspace;
   onAction: (action: WorkspaceAction) => Promise<boolean> | boolean;
@@ -58,17 +88,17 @@ export function VisualBuilder({
   const canBuild = currentRole(workspace).permissions.editStructure;
   const perform = async (
     action: WorkspaceAction,
-    message = "Draft saved. Publish to update the operational workspace.",
+    message = "Bozza salvata. Pubblica per aggiornare il workspace operativo.",
   ) => {
     setBusy(true);
     setFeedback("");
     try {
       if (!(await onAction(action)))
-        throw new Error("The change could not be saved.");
+        throw new Error("Non è stato possibile salvare la modifica.");
       setFeedback(message);
       return true;
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Operation failed.");
+      setFeedback(error instanceof Error ? error.message : "Operazione non riuscita.");
       return false;
     } finally {
       setBusy(false);
@@ -108,7 +138,7 @@ export function VisualBuilder({
     try {
       setProposal(await provider.propose(request, workspace));
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Proposal failed.");
+      setFeedback(error instanceof Error ? error.message : "Proposta non riuscita.");
     } finally {
       setBusy(false);
     }
@@ -118,8 +148,8 @@ export function VisualBuilder({
       <header className="builder-topbar">
         <NodusLogo variant="lockup" />
         <span>
-          Visual Builder · Published v{workspace.configurationVersion || 1}
-          {workspace.configurationDraft ? " · Draft saved" : ""}
+          Editor visivo · Pubblicata v{workspace.configurationVersion || 1}
+          {workspace.configurationDraft ? " · Bozza salvata" : ""}
         </span>
         <div>
           <button className="secondary" onClick={onClose}>
@@ -128,20 +158,20 @@ export function VisualBuilder({
           </button>
           <button className="secondary" onClick={() => setPreview(!preview)}>
             <Eye size={15} />
-            {preview ? "Edit" : "Preview"}
+            {preview ? "Modifica" : "Anteprima"}
           </button>
           <button
             className="primary"
             disabled={!canBuild || !workspace.configurationDraft || busy}
             onClick={() =>
               setConfirmation({
-                title: "Publish configuration?",
-                description: `${config.entities.length} modules, ${config.entities.reduce((sum, item) => sum + item.fields.length, 0)} fields. Existing records are validated against this draft. Incompatible type changes are rejected. The previous configuration is kept in version history.`,
+                title: "Pubblicare la configurazione?",
+                description: `${config.entities.length} moduli, ${config.entities.reduce((sum, item) => sum + item.fields.length, 0)} campi. I record esistenti vengono validati rispetto a questa bozza. Le modifiche di tipo incompatibili vengono rifiutate. La configurazione precedente resta nella cronologia delle versioni.`,
                 action: { type: "publish" },
               })
             }
           >
-            Publish
+            Pubblica
           </button>
         </div>
       </header>
@@ -153,7 +183,7 @@ export function VisualBuilder({
       <div className="builder-layout">
         {!preview && (
           <aside className="builder-library">
-            <h2>Structure</h2>
+            <h2>Struttura</h2>
             <button
               className={selection === "dashboard" ? "active" : ""}
               onClick={() => setSelection("dashboard")}
@@ -186,10 +216,10 @@ export function VisualBuilder({
                   }}
                 >
                   {item.name}
-                  {item.archived ? " · archived" : ""}
+                  {item.archived ? " · archiviato" : ""}
                 </button>
                 <button
-                  aria-label={`Move ${item.name} up`}
+                  aria-label={`Sposta ${item.name} su`}
                   disabled={!canBuild || busy || index === 0}
                   onClick={() =>
                     configure([
@@ -204,7 +234,7 @@ export function VisualBuilder({
                   <ArrowUp size={12} />
                 </button>
                 <button
-                  aria-label={`Move ${item.name} down`}
+                  aria-label={`Sposta ${item.name} giù`}
                   disabled={
                     !canBuild || busy || index === config.entities.length - 1
                   }
@@ -241,7 +271,7 @@ export function VisualBuilder({
                 }}
               >
                 <label>
-                  New module
+                  Nuovo modulo
                   <input
                     value={moduleName}
                     onChange={(event) => setModuleName(event.target.value)}
@@ -254,11 +284,11 @@ export function VisualBuilder({
                   disabled={busy || !moduleName.trim()}
                 >
                   <Plus size={14} />
-                  Create module
+                  Crea modulo
                 </button>
               </form>
             )}
-            <h3>Versions</h3>
+            <h3>Versioni</h3>
             {workspace.configurationHistory?.map((version) => (
               <button
                 key={version.version}
@@ -266,11 +296,11 @@ export function VisualBuilder({
                 onClick={() =>
                   perform(
                     { type: "restoreVersion", version: version.version },
-                    "Version loaded as draft. Publication will check compatibility with current records.",
+                    "Versione caricata come bozza. La pubblicazione verificherà la compatibilità con i record attuali.",
                   )
                 }
               >
-                Restore v{version.version} as draft
+                Ripristina v{version.version} come bozza
               </button>
             ))}
             {workspace.configurationDraft && (
@@ -279,21 +309,21 @@ export function VisualBuilder({
                 disabled={busy}
                 onClick={() =>
                   setConfirmation({
-                    title: "Discard draft?",
+                    title: "Scartare la bozza?",
                     description:
-                      "Only unpublished configuration changes will be removed. Operational records remain unchanged.",
+                      "Verranno rimosse solo le modifiche di configurazione non pubblicate. I record operativi restano invariati.",
                     action: { type: "discardDraft" },
                   })
                 }
               >
-                Discard draft
+                Scarta bozza
               </button>
             )}
           </aside>
         )}
         <main className="builder-canvas">
           <div className="preview-caption">
-            Interactive preview · published records · editing disabled
+            Anteprima interattiva · record pubblicati · modifica disabilitata
           </div>
           {selection === "dashboard" ? (
             <Dashboard
@@ -325,12 +355,12 @@ export function VisualBuilder({
               onOpenRelated={setSelection}
             />
           ) : (
-            <p>Select a module.</p>
+            <p>Seleziona un modulo.</p>
           )}
         </main>
         {!preview && (
           <aside className="builder-properties">
-            <h2>Properties</h2>
+            <h2>Proprietà</h2>
             <nav className="builder-property-tabs">
               {[
                 "fields",
@@ -346,7 +376,7 @@ export function VisualBuilder({
                   aria-pressed={panel === tab}
                   onClick={() => setPanel(tab)}
                 >
-                  {tab}
+                  {panelLabels[tab] ?? tab}
                 </button>
               ))}
             </nav>
@@ -367,7 +397,7 @@ export function VisualBuilder({
                   }}
                 >
                   <label>
-                    Module name
+                    Nome del modulo
                     <input
                       name="moduleName"
                       defaultValue={entity.name}
@@ -375,7 +405,7 @@ export function VisualBuilder({
                     />
                   </label>
                   <button className="secondary" disabled={!canBuild || busy}>
-                    Rename
+                    Rinomina
                   </button>
                 </form>
                 <button
@@ -384,9 +414,9 @@ export function VisualBuilder({
                   onClick={() =>
                     setConfirmation({
                       title: entity.archived
-                        ? "Restore module?"
-                        : "Archive module?",
-                      description: `${entity.records.length} records and all relationships are retained. Archived modules are hidden from operational navigation after publishing.`,
+                        ? "Ripristinare il modulo?"
+                        : "Archiviare il modulo?",
+                      description: `${entity.records.length} record e tutte le relazioni vengono conservati. I moduli archiviati vengono nascosti dalla navigazione operativa dopo la pubblicazione.`,
                       action: {
                         type: "configure",
                         operations: [
@@ -400,15 +430,15 @@ export function VisualBuilder({
                     })
                   }
                 >
-                  {entity.archived ? "Restore module" : "Archive module"}
+                  {entity.archived ? "Ripristina modulo" : "Archivia modulo"}
                 </button>
-                <h3>Fields</h3>
+                <h3>Campi</h3>
                 <select
-                  aria-label="Choose field"
+                  aria-label="Scegli campo"
                   value={fieldId}
                   onChange={(event) => setFieldId(event.target.value)}
                 >
-                  <option value="">New field</option>
+                  <option value="">Nuovo campo</option>
                   {entity.fields.map((field) => (
                     <option key={field.id} value={field.id}>
                       {field.name}
@@ -436,7 +466,7 @@ export function VisualBuilder({
             {entity && panel === "layout" && (
               <>
                 <label>
-                  Sidebar group
+                  Gruppo della barra laterale
                   <input
                     value={entity.navigationGroup || ""}
                     onChange={(event) => {
@@ -445,7 +475,7 @@ export function VisualBuilder({
                   />
                 </label>
                 <label>
-                  Form columns
+                  Colonne del modulo
                   <select
                     value={entityUI.formColumns}
                     onChange={(event) =>
@@ -455,18 +485,18 @@ export function VisualBuilder({
                       })
                     }
                   >
-                    <option value={1}>One</option>
-                    <option value={2}>Two</option>
+                    <option value={1}>Una</option>
+                    <option value={2}>Due</option>
                   </select>
                 </label>
-                <h3>Form order</h3>
+                <h3>Ordine del modulo</h3>
                 {entityUI.formOrder.map((id, index) => (
                   <div className="builder-order" key={id}>
                     <span>
                       {entity.fields.find((field) => field.id === id)?.name}
                     </span>
                     <button
-                      aria-label={`Move form field ${id} up`}
+                      aria-label={`Sposta il campo ${id} su`}
                       disabled={index === 0 || busy}
                       onClick={() =>
                         setUI({
@@ -478,7 +508,7 @@ export function VisualBuilder({
                       ↑
                     </button>
                     <button
-                      aria-label={`Move form field ${id} down`}
+                      aria-label={`Sposta il campo ${id} giù`}
                       disabled={index === entityUI.formOrder.length - 1 || busy}
                       onClick={() =>
                         setUI({
@@ -491,7 +521,7 @@ export function VisualBuilder({
                     </button>
                   </div>
                 ))}
-                <h3>Table columns</h3>
+                <h3>Colonne della tabella</h3>
                 {entity.fields.map((field) => (
                   <label className="builder-check" key={field.id}>
                     <input
@@ -509,7 +539,7 @@ export function VisualBuilder({
                     {field.name}
                   </label>
                 ))}
-                <h3>Supported buttons</h3>
+                <h3>Pulsanti supportati</h3>
                 {(["create", "export"] as const).map((action) => (
                   <label className="builder-check" key={action}>
                     <input
@@ -526,7 +556,7 @@ export function VisualBuilder({
                         })
                       }
                     />
-                    {action}
+                    {actionLabels[action]}
                   </label>
                 ))}
               </>
@@ -553,7 +583,7 @@ export function VisualBuilder({
                 }}
               >
                 <label>
-                  View name
+                  Nome della vista
                   <input name="name" required />
                 </label>
                 <label>
@@ -571,31 +601,31 @@ export function VisualBuilder({
                         ? ["calendar"]
                         : []),
                     ].map((layout) => (
-                      <option key={layout}>{layout}</option>
+                      <option key={layout} value={layout}>{layoutLabels[layout] ?? layout}</option>
                     ))}
                   </select>
                 </label>
                 <p>
-                  The view uses the configured columns. Operational filters and
-                  sorting can be saved from its toolbar.
+                  La vista usa le colonne configurate. Filtri e ordinamenti
+                  operativi si possono salvare dalla sua barra degli strumenti.
                 </p>
                 <button className="primary" disabled={busy || !canBuild}>
-                  Create view
+                  Crea vista
                 </button>
               </form>
             )}
             {panel === "workflow" && (
               <>
                 <p>
-                  Workflows use the same published records and supported actions
-                  as the workspace.
+                  Le automazioni usano gli stessi record pubblicati e le stesse
+                  azioni supportate del workspace.
                 </p>
                 <button
                   className="secondary"
                   disabled={!canBuild}
                   onClick={() => setWorkflowOpen(true)}
                 >
-                  Add workflow to draft
+                  Aggiungi automazione alla bozza
                 </button>
                 {config.workflows.map((flow) => (
                   <p key={flow.id}>{flow.name}</p>
@@ -634,41 +664,42 @@ export function VisualBuilder({
                   </fieldset>
                 ))}
                 <p>
-                  Local roles are demonstrations. Connected mode enforces
-                  permissions on the server.
+                  I ruoli locali sono dimostrativi. Il workspace condiviso applica
+                  i permessi sul server.
                 </p>
               </>
             )}
             {panel === "advanced" && (
               <>
-                <h3>Safe formulas</h3>
+                <h3>Formule sicure</h3>
                 <p>
-                  Select a number or currency field in Fields. Use arithmetic
-                  and stable field IDs: <code>[quantity] * [price]</code>.
-                  Functions and JavaScript are unsupported.
+                  Seleziona un campo numero o valuta in Campi. Usa operazioni
+                  aritmetiche e ID di campo stabili: <code>[quantity] * [price]</code>.
+                  Funzioni e JavaScript non sono supportati.
                 </p>
                 {entity?.fields.map((field) => (
                   <p key={field.id}>
                     {field.name}: <code>{field.id}</code>
                   </p>
                 ))}
-                <h3>Conditional forms</h3>
+                <h3>Moduli condizionali</h3>
                 <p>
-                  Visibility and required rules are configured on each field and
-                  evaluated by the shared record renderer and validator.
+                  Le regole di visibilità e di obbligatorietà si configurano su
+                  ogni campo e vengono valutate dal renderer e dal validatore
+                  condivisi dei record.
                 </p>
                 <a href="/api-reference.html" target="_blank" rel="noreferrer">
-                  Backend API reference
+                  Riferimento API backend
                 </a>
-                <h3>Events</h3>
+                <h3>Eventi</h3>
                 {(workspace.activity || []).slice(0, 10).map((event) => (
                   <p key={event.id}>
                     <small>{event.source}</small> · {event.summary}
                   </p>
                 ))}
                 <p>
-                  Outbound webhooks are not enabled. No external requests are
-                  simulated.
+                  I webhook in uscita non sono abilitati. Nessuna richiesta
+                  esterna viene simulata.
                 </p>
               </>
             )}
@@ -676,11 +707,11 @@ export function VisualBuilder({
               <>
                 <p>
                   {provider === localConfigurationProvider
-                    ? "Local parser · creates modules from named fields. Other operations are available in the manual builder."
-                    : "Server provider · proposals are validated before staging."}
+                    ? "Parser locale · crea moduli a partire da campi con nome. Le altre operazioni sono disponibili nell'editor manuale."
+                    : "Provider server · le proposte vengono validate prima di entrare in bozza."}
                 </p>
                 <label>
-                  Configuration request
+                  Richiesta di configurazione
                   <textarea
                     value={request}
                     onChange={(event) => setRequest(event.target.value)}
@@ -693,7 +724,7 @@ export function VisualBuilder({
                   onClick={ask}
                 >
                   <Send size={14} />
-                  Propose
+                  Proponi
                 </button>
                 {proposal && (
                   <section className="builder-proposal">
@@ -713,13 +744,13 @@ export function VisualBuilder({
                           setProposal(null);
                       }}
                     >
-                      Confirm in draft
+                      Conferma in bozza
                     </button>
                     <button
                       className="secondary"
                       onClick={() => setProposal(null)}
                     >
-                      Cancel
+                      Annulla
                     </button>
                   </section>
                 )}
@@ -728,8 +759,8 @@ export function VisualBuilder({
             {!entity &&
               !["ai", "access", "advanced", "workflow"].includes(panel) && (
                 <p>
-                  Use Widgets in the dashboard preview to configure its content,
-                  or select a module.
+                  Usa i widget nell'anteprima della dashboard per configurarne
+                  il contenuto, oppure seleziona un modulo.
                 </p>
               )}
           </aside>
@@ -765,7 +796,7 @@ export function VisualBuilder({
             </AlertDialog.Description>
             <div>
               <AlertDialog.Cancel asChild>
-                <button className="secondary">Cancel</button>
+                <button className="secondary">Annulla</button>
               </AlertDialog.Cancel>
               <button
                 className="primary"
@@ -776,14 +807,14 @@ export function VisualBuilder({
                     (await perform(
                       confirmation.action,
                       confirmation.action.type === "publish"
-                        ? "Configuration published. Operational records are preserved."
-                        : "Configuration updated.",
+                        ? "Configurazione pubblicata. I record operativi sono conservati."
+                        : "Configurazione aggiornata.",
                     ))
                   )
                     setConfirmation(null);
                 }}
               >
-                Confirm
+                Conferma
               </button>
             </div>
           </AlertDialog.Content>
@@ -814,10 +845,10 @@ function FieldEditor({
   const rule = (key: "visibleWhen" | "requiredWhen") => (
     <fieldset>
       <legend>
-        {key === "visibleWhen" ? "Visible when" : "Required when"}
+        {key === "visibleWhen" ? "Visibile quando" : "Obbligatorio quando"}
       </legend>
       <select
-        aria-label={`${key} field`}
+        aria-label={`${key === "visibleWhen" ? "Campo di visibilità" : "Campo di obbligatorietà"}`}
         value={draft[key]?.fieldId || ""}
         onChange={(event) =>
           setDraft({
@@ -828,7 +859,7 @@ function FieldEditor({
           })
         }
       >
-        <option value="">No condition</option>
+        <option value="">Nessuna condizione</option>
         {entity.fields
           .filter((item) => item.id !== draft.id)
           .map((item) => (
@@ -839,7 +870,7 @@ function FieldEditor({
       </select>
       {draft[key] && (
         <input
-          aria-label={`${key} equals`}
+          aria-label={`${key === "visibleWhen" ? "Visibilità: uguale a" : "Obbligatorietà: uguale a"}`}
           value={String(draft[key]!.equals)}
           onChange={(event) =>
             setDraft({
@@ -876,7 +907,7 @@ function FieldEditor({
       }}
     >
       <label>
-        Field name
+        Nome del campo
         <input
           value={draft.name}
           required
@@ -884,7 +915,7 @@ function FieldEditor({
         />
       </label>
       <label>
-        Type
+        Tipo
         <select
           value={draft.type}
           onChange={(event) =>
@@ -905,7 +936,7 @@ function FieldEditor({
             "checkbox",
             "relation",
           ].map((type) => (
-            <option key={type}>{type}</option>
+            <option key={type} value={type}>{fieldTypeLabels[type] ?? type}</option>
           ))}
         </select>
       </label>
@@ -917,11 +948,11 @@ function FieldEditor({
             setDraft({ ...draft, required: event.target.checked })
           }
         />
-        Required
+        Obbligatorio
       </label>
       {["status", "select"].includes(draft.type) && (
         <label>
-          Options, comma separated
+          Opzioni, separate da virgola
           <input
             value={options}
             onChange={(event) => setOptions(event.target.value)}
@@ -931,7 +962,7 @@ function FieldEditor({
       {draft.type === "relation" && (
         <>
           <label>
-            Related module
+            Modulo collegato
             <select
               value={draft.relationEntityId || ""}
               required
@@ -943,7 +974,7 @@ function FieldEditor({
                 })
               }
             >
-              <option value="">Choose module</option>
+              <option value="">Scegli modulo</option>
               {workspace.entities.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -952,7 +983,7 @@ function FieldEditor({
             </select>
           </label>
           <label>
-            Cardinality
+            Cardinalità
             <select
               value={draft.cardinality || "many-to-one"}
               onChange={(event) =>
@@ -964,15 +995,15 @@ function FieldEditor({
               }
             >
               <option value="many-to-one">
-                Many records → one related record
+                Più record → un record collegato
               </option>
-              <option value="one-to-one">One-to-one, unique link</option>
+              <option value="one-to-one">Uno a uno, collegamento univoco</option>
             </select>
           </label>
         </>
       )}
       <label>
-        Initial value
+        Valore predefinito
         <input
           value={initial}
           onChange={(event) => setInitial(event.target.value)}
@@ -980,7 +1011,7 @@ function FieldEditor({
       </label>
       {["number", "currency"].includes(draft.type) && (
         <label>
-          Formula (optional)
+          Formula (facoltativa)
           <input
             value={draft.formula || ""}
             onChange={(event) =>
@@ -991,9 +1022,9 @@ function FieldEditor({
       )}
       {rule("visibleWhen")}
       {rule("requiredWhen")}
-      <small>Stable ID: {draft.id}</small>
+      <small>ID stabile: {draft.id}</small>
       <button className="primary" disabled={disabled}>
-        {field ? "Update field in draft" : "Add field to draft"}
+        {field ? "Aggiorna campo nella bozza" : "Aggiungi campo alla bozza"}
       </button>
     </form>
   );

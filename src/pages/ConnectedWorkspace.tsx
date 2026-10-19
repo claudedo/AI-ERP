@@ -31,7 +31,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
   const token = async () => {
     const session = await auth?.auth.getSession();
     const value = session?.data.session?.access_token;
-    if (!value) throw new Error("Sign in to connect to the organization.");
+    if (!value) throw new Error("Accedi per collegarti all'organizzazione.");
     return value;
   };
   const repository = useMemo(() => new ApiWorkspaceRepository(token), []),
@@ -43,7 +43,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       setState(next);
       setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Connection failed.");
+      setError(cause instanceof Error ? cause.message : "Connessione non riuscita.");
     }
   };
   useEffect(() => {
@@ -73,10 +73,10 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
         previous ? { ...previous, workspace } : previous,
       );
       await refresh();
-      setNotice("Saved on the organization server.");
+      setNotice("Salvato sul server dell'organizzazione.");
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Save failed.");
+      setError(cause instanceof Error ? cause.message : "Salvataggio non riuscito.");
       return false;
     } finally {
       inFlight.current = false;
@@ -91,7 +91,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       await refresh();
       return true;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Operation failed.");
+      setError(cause instanceof Error ? cause.message : "Operazione non riuscita.");
       return false;
     } finally {
       setBusy(false);
@@ -100,23 +100,23 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
   if (!auth)
     return (
       <main className="connected-shell">
-        <h1>Connected workspace</h1>
+        <h1>Workspace condiviso</h1>
         <p>
           Il workspace condiviso non è ancora attivo in questo ambiente. Per usarlo,
           l’amministratore deve collegare il servizio aziendale e abilitare il tuo account.
           Puoi continuare nella demo: i dati saranno salvati soltanto in questo browser.
         </p>
         <button className="secondary" onClick={onClose}>
-          Return to local demo
+          Torna alla demo locale
         </button>
       </main>
     );
   if (!signedIn)
     return (
       <main className="connected-shell">
-        <h1>Sign in to NODUS</h1>
+        <h1>Accedi a NODUS</h1>
         <p>
-          Access your organization through the configured identity provider.
+          Accedi alla tua organizzazione tramite il provider di identità configurato.
         </p>
         <form
           onSubmit={async (event) => {
@@ -136,7 +136,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
             if (error) setError(error.message);
             else
               setNotice(
-                "The identity provider accepted the sign-in request. Check your email.",
+                "Il provider di identità ha accettato la richiesta di accesso. Controlla la tua email.",
               );
           }}
         >
@@ -145,13 +145,13 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
             <input name="email" type="email" required autoComplete="email" />
           </label>
           <button className="primary" disabled={busy}>
-            Send sign-in link
+            Invia link di accesso
           </button>
         </form>
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
         <button className="secondary" onClick={onClose}>
-          Local demo
+          Demo locale
         </button>
       </main>
     );
@@ -179,26 +179,26 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
   return (
     <main className="connected-shell">
       <header>
-        <h1>{workspace?.companyName || "Connected workspace"}</h1>
-        <span>{state?.role} · Shared organization data</span>
+        <h1>{workspace?.companyName || "Workspace condiviso"}</h1>
+        <span>{state?.role} · Dati condivisi dell'organizzazione</span>
         <button className="secondary" disabled={busy} onClick={refresh}>
-          Refresh
+          Aggiorna
         </button>
         {role?.permissions.editStructure && (
           <button className="primary" onClick={() => setBuilder(true)}>
-            Visual Builder
+            Editor visivo
           </button>
         )}
         <button className="secondary" onClick={onClose}>
-          Local demo
+          Demo locale
         </button>
         <button className="secondary" onClick={() => void auth.auth.signOut()}>
-          Sign out
+          Esci
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      {busy && <p role="status">Saving…</p>}
+      {busy && <p role="status">Salvataggio in corso…</p>}
       {!workspace && state?.role === "admin" && (
         <form
           onSubmit={(event) => {
@@ -210,11 +210,11 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
           }}
         >
           <label>
-            Organization workspace name
+            Nome del workspace dell'organizzazione
             <input name="name" required />
           </label>
           <button className="primary" disabled={busy}>
-            Initialize empty workspace
+            Inizializza workspace vuoto
           </button>
         </form>
       )}
@@ -259,7 +259,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
               onSaveView={view => execute({ type: "configureAndPublish", operations: [{ type: "createView", view }] })}
               onImport={() =>
                 setError(
-                  "Bulk import is available in the local demo. Connected mode currently accepts validated record actions individually.",
+                  "L'importazione di massa è disponibile nella demo locale. Il workspace condiviso accetta per ora solo azioni validate sui singoli record.",
                 )
               }
               onComment={(recordId, body) =>
@@ -290,14 +290,14 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
                     },
                     body: file,
                   });
-                  if (!response.ok) throw new Error("Private upload failed.");
+                  if (!response.ok) throw new Error("Caricamento privato non riuscito.");
                   return request({
                     action: "attachmentComplete",
                     id: upload.id,
                   });
                 } catch (cause) {
                   setError(
-                    cause instanceof Error ? cause.message : "Upload failed.",
+                    cause instanceof Error ? cause.message : "Caricamento non riuscito.",
                   );
                   return false;
                 }
@@ -322,7 +322,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
               }}
             />
           )}
-          <h2>Approvals</h2>
+          <h2>Approvazioni</h2>
           {(workspace.approvals || [])
             .filter((item) => item.status === "pending")
             .map((item) => (
@@ -340,7 +340,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
                         })
                       }
                     >
-                      Approve
+                      Approva
                     </button>
                     <button
                       disabled={busy}
@@ -352,22 +352,22 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
                         })
                       }
                     >
-                      Reject
+                      Rifiuta
                     </button>
                   </>
                 )}
               </div>
             ))}
-          <h2>Background events</h2>
+          <h2>Eventi in background</h2>
           {state?.events.length ? (
             state.events.map((event) => (
               <p key={event.id}>
-                {event.status} · {event.attempts} attempt(s)
+                {event.status} · {event.attempts} tentativo/i
                 {event.error ? ` · ${event.error}` : ""}
               </p>
             ))
           ) : (
-            <p>No queued events.</p>
+            <p>Nessun evento in coda.</p>
           )}
           {state?.role === "admin" && (
             <form
@@ -382,9 +382,9 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
                 });
               }}
             >
-              <h2>Invite a member</h2>
+              <h2>Invita un membro</h2>
               <label>
-                Name
+                Nome
                 <input name="name" required />
               </label>
               <label>
@@ -392,15 +392,15 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
                 <input name="email" type="email" required />
               </label>
               <label>
-                Role
+                Ruolo
                 <select name="role">
-                  <option value="viewer">Viewer</option>
-                  <option value="operator">Operator</option>
-                  <option value="manager">Manager</option>
+                  <option value="viewer">Lettore</option>
+                  <option value="operator">Operatore</option>
+                  <option value="manager">Responsabile</option>
                 </select>
               </label>
               <button className="primary" disabled={busy}>
-                Send invitation
+                Invia invito
               </button>
             </form>
           )}

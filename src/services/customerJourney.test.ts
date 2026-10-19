@@ -233,7 +233,7 @@ describe("customer journey and unified companies", () => {
     );
     expect(() =>
       applyEntry({ ...w, currentUserId: "usr-viewer" }, selected),
-    ).toThrow(/role/);
+    ).toThrow(/ruolo/);
   });
   it("keeps relative dates explicit and updates the existing order", () => {
     const w = base(),

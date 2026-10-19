@@ -73,12 +73,12 @@ export function RecordDetails({
     setError("");
     try {
       if (!(await onAttach(record.id, file)))
-        setError("The attachment could not be saved.");
+        setError("Non è stato possibile salvare l'allegato.");
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "The attachment could not be saved.",
+          : "Non è stato possibile salvare l'allegato.",
       );
     } finally {
       setBusy(false);
@@ -91,7 +91,7 @@ export function RecordDetails({
       setError(
         cause instanceof Error
           ? cause.message
-          : "Attachment could not be opened.",
+          : "Non è stato possibile aprire l'allegato.",
       );
     }
   };
@@ -99,7 +99,7 @@ export function RecordDetails({
     <div className="record-extras">
       <section>
         <h3>
-          Linked records <small>{related.length}</small>
+          Record collegati <small>{related.length}</small>
         </h3>
         {related.length ? (
           <div className="related-list">
@@ -123,47 +123,47 @@ export function RecordDetails({
             ))}
           </div>
         ) : (
-          <p>No linked records yet.</p>
+          <p>Nessun record collegato.</p>
         )}
       </section>
       <section>
         <h3>
-          <MessageSquare size={15} /> Comments <small>{comments.length}</small>
+          <MessageSquare size={15} /> Commenti <small>{comments.length}</small>
         </h3>
         {comments.map((comment) => (
           <article className="record-comment" key={comment.id}>
             <strong>
               {workspace.users.find((u) => u.id === comment.userId)?.name ||
-                "Demo user"}
+                "Utente demo"}
             </strong>
             <time dateTime={comment.at}>
-              {new Date(comment.at).toLocaleString("en-GB")}
+              {new Date(comment.at).toLocaleString("it-IT")}
             </time>
             <p>{comment.body}</p>
           </article>
         ))}
-        {!comments.length && <p>No comments yet.</p>}
+        {!comments.length && <p>Nessun commento.</p>}
         {canEdit && (
           <div className="record-comment-form">
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Add a comment. Mention a demo user with @Name."
-              aria-label="New comment"
+              placeholder="Aggiungi un commento. Menziona un utente demo con @Nome."
+              aria-label="Nuovo commento"
             />
             <button
               className="secondary"
               onClick={add}
               disabled={!draft.trim()}
             >
-              Post comment
+              Pubblica commento
             </button>
           </div>
         )}
       </section>
       <section>
         <h3>
-          <Paperclip size={15} /> Attachments{" "}
+          <Paperclip size={15} /> Allegati{" "}
           <small>{attachments.length}</small>
         </h3>
         {attachments.map((attachment) => (
@@ -171,36 +171,36 @@ export function RecordDetails({
             <span>
               {attachment.name}
               <small>
-                {(attachment.size / 1024).toFixed(0)} KB · {onOpenAttachment ? "private organization storage" : "saved in this browser"}
+                {(attachment.size / 1024).toFixed(0)} KB · {onOpenAttachment ? "archivio privato dell'organizzazione" : "salvato in questo browser"}
               </small>
             </span>
             <button
-              aria-label={`Open ${attachment.name}`}
+              aria-label={`Apri ${attachment.name}`}
               onClick={() => void open(attachment.id, attachment.name, false)}
             >
               <ExternalLink size={15} />
             </button>
             <button
-              aria-label={`Download ${attachment.name}`}
+              aria-label={`Scarica ${attachment.name}`}
               onClick={() => void open(attachment.id, attachment.name, true)}
             >
               <Download size={15} />
             </button>
             {canEdit && (
               <button
-                aria-label={`Remove ${attachment.name}`}
+                aria-label={`Rimuovi ${attachment.name}`}
                 onClick={() => onRemoveAttachment(attachment.id)}
               >
-                Remove
+                Rimuovi
               </button>
             )}
           </div>
         ))}
-        {!attachments.length && <p>No attachments yet.</p>}
+        {!attachments.length && <p>Nessun allegato.</p>}
         {canEdit && (
           <label className="attachment-upload">
             <FilePlus2 size={15} />
-            {busy ? "Saving file…" : "Add file · max 10 MB"}
+            {busy ? "Salvataggio del file…" : "Aggiungi file · max 10 MB"}
             <input
               type="file"
               disabled={busy}

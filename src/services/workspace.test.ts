@@ -37,7 +37,7 @@ describe("import and data validation", () => {
     const w = workspace();
     expect(() => saveRecord(w, "orders", { id: "NEW-1", orderNo: "NEW-1", customer: "missing", status: "Draft" })).toThrow(DomainError);
     w.currentUserId = "usr-viewer";
-    expect(() => saveRecord(w, "customers", { id: "NEW-2", name: "New" })).toThrow(/demo role/);
+    expect(() => saveRecord(w, "customers", { id: "NEW-2", name: "New" })).toThrow(/ruolo demo/);
   });
 
   it("clears incoming links when a record is explicitly deleted", () => {
@@ -78,7 +78,7 @@ describe("views, workflows and AI changes", () => {
     const reverted = undoAiChange(applied, applied.changeHistory[0].id);
     expect(reverted.entities.find(e => e.id === "orders")?.fields.some(f => f.id === "priority")).toBe(false);
     const modified = saveRecord(applied, "customers", { id: "NEW", name: "New" });
-    expect(() => undoAiChange(modified, applied.changeHistory[0].id)).toThrow(/later workspace change/);
+    expect(() => undoAiChange(modified, applied.changeHistory[0].id)).toThrow(/ulteriori modifiche/);
   });
 });
 
@@ -109,7 +109,7 @@ describe("versioned local persistence", () => {
 
   it("does not erase damaged saved data", () => {
     localStorage.setItem(WORKSPACE_KEY, "{damaged");
-    expect(() => localWorkspaceRepository.load()).toThrow(/damaged/);
+    expect(() => localWorkspaceRepository.load()).toThrow(/danneggiato/);
     expect(localWorkspaceRepository.raw()).toBe("{damaged");
   });
 });

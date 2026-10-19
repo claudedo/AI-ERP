@@ -17,7 +17,7 @@ export class ApiWorkspaceRepository implements AsyncWorkspaceRepository {
   async request<T>(body?: unknown): Promise<T> {
     const response = await fetch("/.netlify/functions/api", { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await this.token()}` }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) throw new Error("Backend unavailable. Use Netlify Dev or configure the deployed Functions before opening connected mode.");
+    if (!contentType.includes("application/json")) throw new Error("Backend non disponibile. Usa Netlify Dev o configura le Functions pubblicate prima di aprire la modalità connessa.");
     const data = await response.json();
     if (!response.ok) throw new ApiError(response.status, data.error || `Errore del servizio (${response.status})`);
     return data as T;

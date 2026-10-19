@@ -21,6 +21,6 @@ describe("detailed editable structural preview", () => {
     const w = fixture(), p = await localConfigurationProvider.propose("Crea un modulo Qualità con nome e data", w);
     expect(() => reviewStructure(w, p, ["operation:0"])).toThrow();
     expect(() => reviewStructure(w, { ...p, ambiguities: ["Quale modulo?"] }, [])).toThrow();
-    expect(() => reviewStructure({ ...w, revision: 1 }, p, [])).toThrow(/stale/);
+    expect(() => reviewStructure({ ...w, revision: 1 }, p, [])).toThrow(/non è più aggiornata/);
   });
 });
