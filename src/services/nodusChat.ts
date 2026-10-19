@@ -1,7 +1,14 @@
 import { entrySchema, type EntryProposal } from "./smartEntry";
 import { entryMatchesIntent } from "./entryIntent";
 import type { Workspace } from "../types";
-export const isChatQuestion = (text: string) => /\?|\b(?:quanti|quante|quanto|quali|quale|mostra(?:mi)?|elenca|totale)\b/i.test(text);
+// A question must look like one at its boundaries: an imperative write verb wins,
+// so "Registra un pagamento … totale saldo" is not mistaken for a query.
+const WRITE_IMPERATIVE = /^(?:per favore\s+|ti prego\s+)?(?:registra|aggiungi|inserisci|crea|aggiorna|modifica|segna|sposta|rimuovi|cambia)\b/i;
+const QUESTION_START = /^(?:quant[ioe]|quali?|qual(?:e|\s+è)|mostra(?:mi)?|mi\s+(?:mostri|dici|elenchi)|elenca|dimmi|che|cosa|come|dove|chi|quando)\b/i;
+export const isChatQuestion = (text: string) => {
+  const t = text.trim();
+  return !WRITE_IMPERATIVE.test(t) && (/\?\s*$/.test(t) || QUESTION_START.test(t));
+};
 
 export function chatIntent(text: string): "structure" | "records" | "question" {
   if (isChatQuestion(text)) return "question";

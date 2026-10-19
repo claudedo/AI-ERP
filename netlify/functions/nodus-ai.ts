@@ -1,7 +1,7 @@
 import { chatRequestSchema } from "../../src/ai/chatContract";
 import { contextWorkspace, selectChatContext } from "../../src/ai/chatContext";
 import { localChat } from "../../src/ai/localChat";
-import { openaiChat } from "../../server/openaiChat";
+import { openaiChat, ProviderUnavailable } from "../../server/openaiChat";
 import { ChatRateLimit } from "../../server/chatRateLimit";
 import { authenticate, database, HttpError, respond, withMembers } from "../../server/platform";
 import type { Workspace } from "../../src/types";
@@ -49,8 +49,10 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const reservation = process.env.OPENAI_API_KEY ? await reserveChatQuota(quotaClient) : null;
     if (!reservation) return respond(await localChat(body.message, target, body.contextId));
     try { return respond(await openaiChat(body, context, workspace)); }
-    catch {
-      await reservation.refund();
+    catch (error) {
+      // Refund only calls the provider never billed; a billed but invalid reply keeps
+      // its quota, so prompts that force invalid output cannot loop for free.
+      if (error instanceof ProviderUnavailable) await reservation.refund();
       // A provider outage, invalid JSON, timeout, missing key or quota error never writes data.
       return respond(await localChat(body.message, target, body.contextId));
     }

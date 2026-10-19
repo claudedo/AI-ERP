@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { analyzeBusiness, generateArchitectureOptions, generateWorkspace } from "../src/services/aiEngine";
 import { upgradeCompanies } from "../src/services/companies";
 import { applyEntry } from "../src/services/smartEntry";
-import { chatIntent } from "../src/services/nodusChat";
+import { chatIntent, isChatQuestion } from "../src/services/nodusChat";
 import { selectChatContext } from "../src/ai/chatContext";
 import { chatResponseSchema, modelReplySchema } from "../src/ai/chatContract";
 import { paymentGuard } from "../src/ai/paymentGuard";
@@ -188,6 +188,16 @@ describe("minimum context, metrics and fallback", () => {
     expect(limiter.accept("ip", "11", 20)).toBe(false); expect(limiter.accept("ip", "same", 60001)).toBe(true);
     expect(limiter.accept("another-ip", "first", 0)).toBe(true);
     expect(limiter.accept("another-ip", "second", 1)).toBe(true);
+  });
+  it("treats imperative payment inserts as writes even with question-like words", () => {
+    const w = fixture();
+    expect(isChatQuestion("Registra un nuovo pagamento di 300 mila euro della casa a Modena, totale saldo")).toBe(false);
+    expect(paymentGuard("Registra un nuovo pagamento di 300 mila euro della casa a Modena, totale saldo", w)?.type).toBe("entry_proposal");
+    expect(paymentGuard("Pagamento ricevuto di 300 mila euro per la casa a Modena", w)?.type).toBe("entry_proposal");
+    for (const q of ["Quanti pagamenti abbiamo ricevuto questo mese?", "Mostrami i pagamenti ricevuti", "Qual è il totale dei pagamenti ricevuti"]) {
+      expect(isChatQuestion(q)).toBe(true);
+      expect(paymentGuard(q, w)).toBeNull();
+    }
   });
   it("keeps fallback replies in Italian without claiming generic language understanding", async () => {
     const reply = await localChat("Domanda non riconosciuta", fixture()); expect(reply.source).toBe("local"); expect(reply.type).toBe("unsupported"); expect(reply.message).toContain("modalità locale");

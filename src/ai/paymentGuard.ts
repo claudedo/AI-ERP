@@ -8,7 +8,9 @@ import { isChatQuestion } from "../services/nodusChat";
 
 /** High-risk financial extraction is deterministic; the model cannot choose an ambiguous link. */
 export function paymentGuard(message: string, workspace: Workspace, source: "local" | "openai" = "local"): ChatResponse | null {
-  if (isChatQuestion(message) || !/pagament|incasso/i.test(message) || !/\b(?:nuov[oa]|registra|aggiungi|inserisci)\b/i.test(message)) return null;
+  // A write is an explicit insert verb, or a "received" statement that carries an amount.
+  const writes = /\b(?:nuov[oa]|registra|aggiungi|inserisci)\b/i.test(message) || (/ricevut/i.test(message) && /\d[\d.,]*\s*(?:mila|milion[ei])?\s*(?:euro|€)/i.test(message));
+  if (isChatQuestion(message) || !/pagament|incasso/i.test(message) || !writes) return null;
   const match = message.match(/(\d[\d.,]*)\s*(mila|milion[ei])?\s*(?:euro|€)/i),
     parsed = match ? parseItalianNumber(match[1]) : null,
     amount = parsed === null ? null : parsed * (match?.[2]?.toLowerCase() === "mila" ? 1000 : /milion/i.test(match?.[2] || "") ? 1000000 : 1),

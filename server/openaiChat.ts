@@ -82,12 +82,16 @@ export function validateModelReply(input: unknown, workspace: Workspace, message
   return chatResponseSchema.parse({ ...base, type: reply.type, proposal });
 }
 
+/** The provider was not reached or refused the call: nothing was billed, so the quota may be refunded.
+ * Any failure after a 2xx response (parse/validation) is NOT this error: that call was billed. */
+export class ProviderUnavailable extends Error {}
+
 /** No tools, browsing, writes, key logging, or provider error bodies. */
 export async function openaiChat(body: ChatRequest, context: ChatContext, authoritative?: Workspace, fetcher: typeof fetch = fetch): Promise<ChatResponse> {
   const guarded = paymentGuard(body.message, authoritative || contextWorkspace(context));
   if (guarded) return guarded;
   const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("Unavailable");
+  if (!key) throw new ProviderUnavailable("Unavailable");
   const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
   const structural = chatIntent(body.message) === "structure";
   const structureInstructions = structural ? `Per structure_proposal solo richiesta esplicita Admin; structure_json deve rispettare questo schema: ${JSON.stringify(z.toJSONSchema(proposalSchema))}.` : "Non proporre cambiamenti strutturali: structure_json deve essere null.";
@@ -100,8 +104,8 @@ export async function openaiChat(body: ChatRequest, context: ChatContext, author
       input: [{ role: "developer", content: JSON.stringify({ today: new Date().toISOString().slice(0, 10), context }) }, ...body.history.flatMap(turn => [{ role: "user", content: turn.q }, { role: "assistant", content: turn.a }]), { role: "user", content: body.message }],
       text: { format: { type: "json_schema", name: "nodus_chat", strict: true, schema } },
     }),
-  });
-  if (!result.ok) throw new Error("Unavailable");
+  }).catch(() => { throw new ProviderUnavailable("Unavailable"); }); // network error or timeout
+  if (!result.ok) throw new ProviderUnavailable("Unavailable");
   const raw = await result.text(); if (raw.length > 180000) throw new Error("Response too large");
   const parsed = JSON.parse(raw);
   if (parsed.status !== "completed" || !Array.isArray(parsed.output)) throw new Error("Incomplete response");
