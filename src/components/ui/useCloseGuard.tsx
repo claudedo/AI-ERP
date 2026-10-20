@@ -24,7 +24,7 @@ export function useCloseGuard(
     pendingNavigation.current = resume;
     setAsking(true);
     return true;
-  }), [boundary?.register, id]);
+  }, () => current.current.dirty && !bypass.current), [boundary?.register, id]);
   useEffect(() => {
     const before = (event: BeforeUnloadEvent) => {
       if (dirty) {
