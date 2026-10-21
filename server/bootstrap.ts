@@ -5,9 +5,13 @@ import type { Workspace } from "../src/types";
 import { HttpError, withMembers, type Principal, type VerifiedUser } from "./platform";
 import { persistWorkspace } from "./repository";
 
-// Printable text only: control characters would corrupt headers, logs and exports.
-const printable = (max: number, min = 1) => z.string().trim().min(min).max(max).regex(/^[^\p{Cc}]+$/u);
-export const bootstrapRequestSchema = z.object({ action: z.literal("bootstrap"), company: printable(100, 2), name: printable(100).optional() }).strict();
+// Printable, well-formed text only: control characters corrupt logs/exports, and lone UTF-16
+// surrogates cannot be stored in jsonb (the whole transaction would fail).
+const loneSurrogate = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+const printable = (max: number, min = 1) => z.string().refine(value => !loneSurrogate.test(value), "Malformed Unicode").transform(value => value.trim()).pipe(z.string().min(min).max(max).regex(/^[^\p{Cc}]+$/u));
+export const bootstrapRequestSchema = z.object({ company: printable(100, 2), name: printable(100).optional() }).strict();
+/** Advisory-lock key serializing everything that creates memberships for one user (bootstrap, invite). */
+export const userLockKey = (userId: string) => `nodus:membership:${userId}`;
 export type BootstrapRequest = z.infer<typeof bootstrapRequestSchema>;
 export type BootstrapResult = { created: true; organizationId: string; role: "admin"; workspace: Workspace } | { created: false; organizationId: string; role: string; message: string };
 
@@ -34,7 +38,7 @@ export async function bootstrapOrganization(sql: ReturnType<typeof postgres>, us
   if (!user.emailConfirmedAt) throw new HttpError(403, "Conferma la tua email per continuare.", "email_not_confirmed");
   const displayName = displayNameOf(user, input.name);
   return sql.begin(async tx => {
-    await tx`SELECT pg_advisory_xact_lock(hashtextextended(${`nodus:bootstrap:${user.id}`}, 0))`;
+    await tx`SELECT pg_advisory_xact_lock(hashtextextended(${userLockKey(user.id)}, 0))`;
     const [existing] = await tx`SELECT organization_id, role_id FROM memberships WHERE user_id=${user.id}::uuid ORDER BY organization_id LIMIT 1`;
     // Idempotent, and never a second organization for invited members.
     if (existing) return { created: false as const, organizationId: String(existing.organization_id), role: String(existing.role_id), message: "Hai già un'azienda: ti abbiamo collegato a quella esistente." };

@@ -92,7 +92,7 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError("");
     try {
-      const result = await repository.request<{ created: boolean; message?: string }>({ action: "bootstrap", company, name });
+      const result = await repository.request<{ created: boolean; message?: string }>({ company, name }, "bootstrap");
       setNotice(result.created ? "Azienda creata. Sei l'amministratore: puoi invitare i colleghi." : result.message || "");
       await refresh();
     } catch (cause) {

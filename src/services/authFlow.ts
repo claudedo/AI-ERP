@@ -6,6 +6,9 @@ export interface AuthFailure { code?: string; status?: number; message?: string 
 export interface AuthIssue { code: string; message: string }
 
 export const EMAIL_NOT_CONFIRMED = "Conferma la tua email per continuare.";
+// Anti-enumeration: the same answer whether or not an account exists for the address.
+export const SIGNUP_NEUTRAL = "Se l'indirizzo è valido e non ancora registrato, riceverai un'email di conferma.";
+export const LINK_NEUTRAL = "Se esiste un account con questa email, riceverai un link di accesso.";
 const RATE_LIMITED = "Troppi tentativi. Attendi qualche minuto e riprova.";
 const rateLimited = (error: AuthFailure) => error.status === 429 || /^over_.*rate_limit$/.test(error.code || "");
 
@@ -14,7 +17,7 @@ export const signupRedirect = (origin: string) => `${origin}/?mode=connected&flo
 export const connectedRedirect = (origin: string) => `${origin}/?mode=connected`;
 
 export function signUpMessage(error: AuthFailure): string {
-  if (error.code === "user_already_exists" || error.code === "email_exists") return "Email già registrata. Accedi con la tua password oppure richiedi un link di accesso.";
+  if (error.code === "user_already_exists" || error.code === "email_exists") return SIGNUP_NEUTRAL;
   if (error.code === "weak_password") return "La password è troppo debole: usa almeno 8 caratteri, combinando lettere e numeri.";
   if (rateLimited(error)) return RATE_LIMITED;
   if (error.code === "signup_disabled" || error.code === "email_provider_disabled") return "La registrazione non è attiva su questo ambiente. Contatta l'amministratore di NODUS.";
@@ -23,17 +26,20 @@ export function signUpMessage(error: AuthFailure): string {
   return "Registrazione non riuscita. Riprova tra poco.";
 }
 
-export function signInMessage(error: AuthFailure): string {
+export function signInMessage(error: AuthFailure, method: "password" | "link" = "password"): string {
+  if (rateLimited(error)) return RATE_LIMITED;
+  // A magic link for an unknown address fails with these codes: answer exactly like a success.
+  if (method === "link" && ["otp_disabled", "signup_disabled", "user_not_found"].includes(error.code || "")) return LINK_NEUTRAL;
   if (error.code === "email_not_confirmed") return EMAIL_NOT_CONFIRMED;
   if (error.code === "invalid_credentials") return "Email o password non corrette.";
-  if (error.code === "otp_disabled" || error.code === "signup_disabled" || error.code === "user_not_found") return "Non troviamo un account attivo con questa email. Registrati oppure chiedi un invito all'amministratore della tua azienda.";
-  if (rateLimited(error)) return RATE_LIMITED;
   return "Accesso non riuscito. Riprova tra poco.";
 }
 
-/** With confirmation ON, Supabase answers an already registered email with a user that has no identities. */
-export function signUpOutcome(data: { user: { identities?: unknown[] } | null; session: unknown }): "already_registered" | "confirm_email" | "signed_in" {
-  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return "already_registered";
+/**
+ * With confirmation ON, Supabase answers an already registered email with a user without identities;
+ * it is deliberately treated like a fresh sign-up so the UI never discloses that the account exists.
+ */
+export function signUpOutcome(data: { user: { identities?: unknown[] } | null; session: unknown }): "confirm_email" | "signed_in" {
   return data.session ? "signed_in" : "confirm_email";
 }
 

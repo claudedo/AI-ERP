@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { authenticate, database, HttpError, identity, required, respond, verifiedUser, withMembers } from "../../server/platform";
+import { authenticate, database, HttpError, identity, required, respond, withMembers } from "../../server/platform";
 import { persistWorkspace } from "../../server/repository";
-import { bootstrapOrganization, bootstrapRequestSchema, initialWorkspace } from "../../server/bootstrap";
-import { ChatRateLimit } from "../../server/chatRateLimit";
+import { initialWorkspace, userLockKey } from "../../server/bootstrap";
 import { actionSchema, dispatchWorkspaceAction } from "../../src/services/workspaceActions";
 import { configurationOf, proposalSchema, applyConfigurationOperations } from "../../src/services/configuration";
 import { applicableWorkflows, requirePermission } from "../../src/services/workspaceDomain";
@@ -21,39 +20,27 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("attachmentInit"), entityId: z.string(), recordId: z.string(), filename: z.string().min(1).max(200), mime: z.string().max(150), size: z.number().int().min(0).max(10485760) }).strict(),
   z.object({ action: z.literal("attachmentComplete"), id: z.string().uuid() }).strict(),
   z.object({ action: z.literal("attachmentUrl"), id: z.string().uuid() }).strict(),
-  z.object({ action: z.literal("attachmentDelete"), id: z.string().uuid() }).strict(),
-  bootstrapRequestSchema
+  z.object({ action: z.literal("attachmentDelete"), id: z.string().uuid() }).strict()
 ]);
 // Enforced by Netlify before any Function instance runs; generous because it covers every API action.
+// Self-service company creation has its own, stricter Function: netlify/functions/bootstrap.ts.
 export const config = { rateLimit: { windowLimit: 300, windowSize: 60, aggregateBy: ["ip", "domain"] } };
-// Self-service bootstrap is far rarer: a stricter per-instance limit, checked before the identity provider is called.
-const bootstrapLimiter = new ChatRateLimit(5);
 const notConfigured = "Il servizio NODUS non è ancora configurato su questo server. Contatta l'amministratore.";
-export default async function handler(request: Request, netlify: { ip?: string } = {}): Promise<Response> {
+export default async function handler(request: Request): Promise<Response> {
   try {
     if (!["GET", "POST"].includes(request.method)) throw new HttpError(405, "Method not allowed.");
-    let body: z.infer<typeof requestSchema> | undefined;
-    if (request.method === "POST") {
-      if (!request.headers.get("content-type")?.includes("application/json")) throw new HttpError(415, "Use application/json.");
-      const text = await request.text();
-      if (text.length > 1048576) throw new HttpError(413, "Request exceeds 1 MB.");
-      body = requestSchema.parse(JSON.parse(text));
-    }
-    if (body?.action === "bootstrap") {
-      const client = netlify.ip || request.headers.get("x-nf-client-connection-ip") || "unknown";
-      if (!bootstrapLimiter.accept(client, randomUUID())) throw new HttpError(429, "Troppi tentativi. Riprova tra un minuto.", "rate_limit");
-      // User id comes only from the verified token; the body carries just the validated company/display name.
-      const result = await bootstrapOrganization(database(), await verifiedUser(request), body);
-      return respond(result, result.created ? 201 : 200);
-    }
     const principal = await authenticate(request), sql = database();
     const rows = await sql`SELECT payload FROM workspaces WHERE organization_id=${principal.organizationId}::uuid`;
     let workspace = rows[0] ? await withMembers(rows[0].payload as Workspace, principal) : null;
-    if (!body) {
+    if (request.method === "GET") {
       const attachments = await sql`SELECT a.id,a.entity_id,a.record_id,a.filename,a.mime,a.size,a.status FROM attachments a WHERE a.organization_id=${principal.organizationId}::uuid AND a.status='ready' AND EXISTS(SELECT 1 FROM records r WHERE r.organization_id=a.organization_id AND r.entity_id=a.entity_id AND r.id=a.record_id)`;
       const events = await sql`SELECT id,status,attempts,error,created_at FROM workflow_events WHERE organization_id=${principal.organizationId}::uuid ORDER BY created_at DESC LIMIT 30`;
       return respond({ workspace, organizationId: principal.organizationId, role: principal.roleId, attachments, events, aiConfigured: !!process.env.AI_PROVIDER_URL && !!process.env.AI_PROVIDER_API_KEY });
     }
+    if (!request.headers.get("content-type")?.includes("application/json")) throw new HttpError(415, "Use application/json.");
+    const text = await request.text();
+    if (text.length > 1048576) throw new HttpError(413, "Request exceeds 1 MB.");
+    const body = requestSchema.parse(JSON.parse(text));
     if (body.action === "initialize") {
       if (principal.roleId !== "admin") throw new HttpError(403, "Only an organization admin can initialize a workspace.");
       workspace = await withMembers(initialWorkspace(body.name), principal);
@@ -94,8 +81,14 @@ export default async function handler(request: Request, netlify: { ip?: string }
       if (principal.roleId !== "admin") throw new HttpError(403, "Only an organization admin can invite members.");
       const { data, error } = await identity().auth.admin.inviteUserByEmail(body.email, { redirectTo: new URL("/?mode=connected", required("APP_ORIGIN")).toString(), data: { name: body.name } });
       if (error || !data.user) throw new HttpError(502, "The identity provider could not send the invitation. Check provider logs and email configuration.");
-      await sql`INSERT INTO memberships(organization_id,user_id,role_id,display_name) VALUES(${principal.organizationId}::uuid,${data.user.id}::uuid,${body.role},${body.name}) ON CONFLICT DO NOTHING`;
-      await sql`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,'invite',${sql.json({ invitedUserId: data.user.id, role: body.role })})`;
+      const invitedId = data.user.id;
+      // Same per-user lock as bootstrap: an invite and a self-service bootstrap for this user serialize,
+      // so bootstrap never creates an organization while blind to a concurrent invitation.
+      await sql.begin(async tx => {
+        await tx`SELECT pg_advisory_xact_lock(hashtextextended(${userLockKey(invitedId)}, 0))`;
+        await tx`INSERT INTO memberships(organization_id,user_id,role_id,display_name) VALUES(${principal.organizationId}::uuid,${invitedId}::uuid,${body.role},${body.name}) ON CONFLICT DO NOTHING`;
+        await tx`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,'invite',${tx.json({ invitedUserId: invitedId, role: body.role })})`;
+      });
       return respond({ message: "Invitation accepted by the identity provider. Email delivery is not independently verified." });
     }
     if (body.action === "operator") return respond({ result: answerOperator(interpretCommand(body.request), workspace) });

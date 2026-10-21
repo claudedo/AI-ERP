@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { EMAIL_NOT_CONFIRMED, connectedRedirect, signInMessage, signUpMessage, signUpOutcome, signupRedirect, type AuthIssue } from "../services/authFlow";
+import { EMAIL_NOT_CONFIRMED, LINK_NEUTRAL, SIGNUP_NEUTRAL, connectedRedirect, signInMessage, signUpMessage, signUpOutcome, signupRedirect, type AuthIssue } from "../services/authFlow";
 
 type Mode = "signin" | "signup" | "check-email";
 const field = (form: HTMLFormElement, name: string) => String(new FormData(form).get(name) || "").trim();
@@ -37,8 +37,10 @@ export function ConnectedAuth({ auth, issue, onClose }: { auth: SupabaseClient; 
       ? await auth.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false, emailRedirectTo: connectedRedirect(location.origin) } })
       : await auth.auth.signInWithPassword({ email: address, password });
     setBusy(false);
-    if (error) { if (signInMessage(error) === EMAIL_NOT_CONFIRMED) setMode("check-email"); setError(signInMessage(error)); }
-    else if (viaLink) setNotice("Se l'indirizzo ha un account attivo, riceverai un link di accesso. Controlla la tua email.");
+    const message = error ? signInMessage(error, viaLink ? "link" : "password") : viaLink ? LINK_NEUTRAL : "";
+    if (message === LINK_NEUTRAL) { setNotice(LINK_NEUTRAL); return; }
+    if (message === EMAIL_NOT_CONFIRMED) setMode("check-email");
+    if (message) setError(message);
   };
 
   const signUp = async (event: FormEvent<HTMLFormElement>) => {
@@ -48,10 +50,10 @@ export function ConnectedAuth({ auth, issue, onClose }: { auth: SupabaseClient; 
     setEmail(address); setError(""); setNotice(""); setBusy(true);
     const { data, error } = await auth.auth.signUp({ email: address, password, options: { emailRedirectTo: signupRedirect(location.origin), data: { name, company } } });
     setBusy(false);
-    if (error) { setError(signUpMessage(error)); return; }
-    const outcome = signUpOutcome(data);
-    if (outcome === "already_registered") setError(signUpMessage({ code: "user_already_exists" }));
-    else if (outcome === "confirm_email") setMode("check-email");
+    const message = error ? signUpMessage(error) : "";
+    // Existing and new addresses take the same path: the neutral "check your email" screen.
+    if (message && message !== SIGNUP_NEUTRAL) { setError(message); return; }
+    if (error || signUpOutcome(data) === "confirm_email") setMode("check-email");
   };
 
   return (
@@ -89,7 +91,7 @@ export function ConnectedAuth({ auth, issue, onClose }: { auth: SupabaseClient; 
       )}
       {mode === "check-email" && (
         <section className="auth-form">
-          <p>Abbiamo inviato un link di conferma a <strong>{email || "il tuo indirizzo"}</strong>. Apri l'email e conferma l'indirizzo per continuare: la tua azienda verrà creata al primo accesso.</p>
+          <p>{SIGNUP_NEUTRAL} Indirizzo: <strong>{email || "il tuo indirizzo"}</strong>. Apri l'email e conferma l'indirizzo per continuare: la tua azienda verrà creata al primo accesso.</p>
           <ResendConfirmation auth={auth} email={email} />
           <div className="auth-actions"><button type="button" className="secondary" onClick={() => switchTo("signin")}>Torna all'accesso</button></div>
         </section>

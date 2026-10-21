@@ -135,8 +135,10 @@ describe("self-service organization bootstrap", () => {
   });
 
   it("is no longer an action of the general API function", async () => {
-    expect((await call("token-alice", { action: "bootstrap", company: "Alfa Srl" })).status).toBe(400);
-    expect(db.state.organizations).toEqual([]);
+    expect((await call("token-alice", { action: "bootstrap", company: "Alfa Srl" })).status).toBe(403);
+    db.reset({ organizations: [{ id: ORG_A, name: "Alfa", created_by: null }], memberships: [{ organization_id: ORG_A, user_id: ALICE, role_id: "admin", display_name: "Alice" }] });
+    expect((await call("token-alice", { action: "bootstrap", company: "Altra" })).status).toBe(400);
+    expect(db.state.organizations).toHaveLength(1);
   });
 
   it("never bootstraps a new organization for an invited member who already has a membership", async () => {

@@ -15,8 +15,9 @@ export async function executeWithRecovery(repository: AsyncWorkspaceRepository, 
 }
 export class ApiWorkspaceRepository implements AsyncWorkspaceRepository {
   constructor(private token: () => Promise<string>) {}
-  async request<T>(body?: unknown): Promise<T> {
-    const response = await fetch("/.netlify/functions/api", { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await this.token()}` }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  /** `fn` selects the Netlify Function: the workspace API, or self-service company creation. */
+  async request<T>(body?: unknown, fn: "api" | "bootstrap" = "api"): Promise<T> {
+    const response = await fetch(`/.netlify/functions/${fn}`, { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await this.token()}` }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) throw new ApiError(503, "Backend non disponibile. In locale avvia `npm run dev` (include le Functions); online verifica che le Functions siano pubblicate.", "not_configured");
     const data = await response.json();
