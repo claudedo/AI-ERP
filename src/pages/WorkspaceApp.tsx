@@ -1002,7 +1002,7 @@ export function WorkspaceApp({
         <AlertDialog.Root open={confirmReset} onOpenChange={setConfirmReset}>
           <AlertDialog.Portal>
             <AlertDialog.Overlay className="alert-overlay" />
-            <AlertDialog.Content className="confirm-box">
+            <AlertDialog.Content className="confirm-box" aria-modal="true">
               <RotateCcw />
               <AlertDialog.Title>Reimpostare il workspace demo?</AlertDialog.Title>
               <AlertDialog.Description>
@@ -1057,7 +1057,7 @@ function HistoryPage({
     <div className="entity-page history-page">
       <div className="page-heading">
         <div>
-          <span className="overline">WORKSPACE / GOVERNANCE</span>
+          <span className="overline">{/* taste-skill-ignore: DESIGN.md overline, frozen copy */}WORKSPACE / GOVERNANCE</span>
           <h1>Cronologia modifiche</h1>
           <p>
             Registro trasparente delle modifiche strutturali proposte e applicate.

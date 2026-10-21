@@ -164,7 +164,7 @@ export function Builder({
               NODUS ARCHITECT
             </div>
           </div>
-          <h2>Raccontami come funziona la tua azienda.</h2>
+          <h1>Raccontami come funziona la tua azienda.</h1>
           <p>
             Descrivi il team, cosa gestite e dove il processo attuale si
             complica.
@@ -240,7 +240,7 @@ export function Builder({
           </div>
           <div className="split-title">
             <div>
-              <h2>Tre modi per strutturare il tuo workspace.</h2>
+              <h1>Tre modi per strutturare il tuo workspace.</h1>
               <p>
                 Ogni modello supporta la stessa attività. Scegli il livello di
                 dettaglio adatto al tuo team oggi.
@@ -259,6 +259,8 @@ export function Builder({
                 type="button"
                 role="radio"
                 aria-checked={selected?.id === option.id}
+                aria-labelledby={`architecture-${option.id}-title`}
+                aria-describedby={`architecture-${option.id}-description`}
                 tabIndex={
                   index === (selectedIndex < 0 ? 0 : selectedIndex) ? 0 : -1
                 }
@@ -274,8 +276,8 @@ export function Builder({
                     </i>
                   )}
                 </div>
-                <h3>{option.title}</h3>
-                <p>{option.description}</p>
+                <h2 id={`architecture-${option.id}-title`}>{option.title}</h2>
+                <p id={`architecture-${option.id}-description`}>{option.description}</p>
                 <div className="module-list">
                   {option.modules.map((m) => (
                     <span key={m}>{templateModuleLabel(m)}</span>
@@ -326,7 +328,7 @@ export function Builder({
               SUGGERIMENTI NODUS
             </div>
           </div>
-          <h2>Due miglioramenti prima di creare il workspace.</h2>
+          <h1>Due miglioramenti prima di creare il workspace.</h1>
           <p>
             Suggerimenti coerenti con i moduli scelti. Le automazioni della demo
             sono eseguite in questo browser.
@@ -337,7 +339,7 @@ export function Builder({
             </div>
             <div>
               <span className="suggestion-type">Automazione locale</span>
-              <h3>{recommendation}</h3>
+              <h2>{recommendation}</h2>
               <p>
                 La notifica interna sarà creata solo quando cambierà un record
                 pertinente.
@@ -361,7 +363,7 @@ export function Builder({
             </div>
             <div>
               <span className="suggestion-type">Struttura dati consigliata</span>
-              <h3>Aziende, contatti e sedi separati</h3>
+              <h2>Aziende, contatti e sedi separati</h2>
               <p>
                 Una sola azienda può essere cliente e fornitore, con più
                 contatti e sedi collegati.
@@ -405,10 +407,10 @@ function LoadingView({
         <i />
         <i />
       </div>
-      <h2>
+      <h1>
         {title}
         <span className="ellipsis">…</span>
-      </h2>
+      </h1>
       <p>{subtitle}</p>
       <div className="steps">
         {steps.map((s, i) => (

@@ -25,7 +25,7 @@ export function Landing({ onStart, onOpenConnected }: { onStart: () => void; onO
         <p className="demo-disclosure">Demo locale: i dati restano in questo browser. La struttura iniziale è proposta da regole locali dichiarate, senza inviare la descrizione a un modello AI esterno.</p>
       </div>
       <div className="hero-stage">
-        <div className="table-card landing-fragment" data-ui aria-label="Esempio di modulo Immobili, dati di esempio">
+        <div className="table-card landing-fragment" data-ui role="figure" aria-label="Esempio di modulo Immobili, dati di esempio">
           <div className="landing-fragment-head"><strong>Immobili</strong><span>{sampleRows.length} record</span></div>
           <div className="table-scroll">
             <table>

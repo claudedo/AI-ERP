@@ -213,7 +213,7 @@ export function EntityTable({
       <div className="entity-page">
         <div className="page-heading entity-heading">
           <div className="entity-title">
-            <span className="overline">
+            <span className="overline">{/* taste-skill-ignore: DESIGN.md overline, frozen copy */}
               WORKSPACE / {entity.name.toUpperCase()}
             </span>
             <div className="entity-title-row">

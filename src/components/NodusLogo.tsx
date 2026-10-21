@@ -7,5 +7,6 @@ const sources: Record<NodusLogoVariant, string> = {
 };
 
 export function NodusLogo({ variant = "lockup", className = "" }: { variant?: NodusLogoVariant; className?: string }) {
-  return <img className={`nodus-logo nodus-logo--${variant} ${className}`.trim()} src={sources[variant]} alt={variant === "mark" ? "NODUS symbol" : "NODUS"} />;
+  // The mark always sits beside a visible "NODUS …" label, so it is decorative; the lockup carries the name.
+  return <img className={`nodus-logo nodus-logo--${variant} ${className}`.trim()} src={sources[variant]} alt={variant === "mark" ? "" : "NODUS"} />;
 }

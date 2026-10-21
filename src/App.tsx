@@ -170,7 +170,7 @@ function Application() {
   if (storageError && !workspace)
     return (
       <main className="panel-page storage-recovery" role="alert">
-        <h2>Workspace needs recovery</h2>
+        <h1>Workspace needs recovery</h1>
         <p>{storageError}</p>
         <p>
           Your saved data has not been silently reset. Download the raw copy

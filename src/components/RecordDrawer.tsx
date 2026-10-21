@@ -198,6 +198,7 @@ export function RecordDrawer({
           <Dialog.Overlay className="drawer-overlay" />
           <Dialog.Content
             className="record-drawer"
+            aria-modal="true"
             aria-describedby="record-drawer-description"
             onCloseAutoFocus={(event) => event.preventDefault()}
           >
@@ -344,7 +345,7 @@ export function RecordDrawer({
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>
                     <AlertDialog.Overlay className="alert-overlay" />
-                    <AlertDialog.Content className="confirm-box">
+                    <AlertDialog.Content className="confirm-box" aria-modal="true">
                       <AlertTriangle />
                       <AlertDialog.Title>Eliminare questo record?</AlertDialog.Title>
                       <AlertDialog.Description>

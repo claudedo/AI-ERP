@@ -5,7 +5,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
-.primary { background: var(--accent); border-color: var(--accent); border-radius: 8px; box-shadow: none; }
+/* Twelve Floor Rule: the browser's "smaller" would drop an unstyled <small> (counts in headings) to 10px. */
+small { font-size: max(12px, .84em); }
+.primary { background: var(--accent); border-color: var(--accent); border-radius: var(--radius-sm); box-shadow: none; }
 .primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: none; }
 .secondary, .text-button, .table-tools button, .top-actions button { background: var(--surface); border-color: var(--line); box-shadow: none; }
 .secondary:hover, .text-button:hover, .table-tools button:hover, .top-actions button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
@@ -24,7 +26,7 @@ button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .hero-identity { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .hero-identity .nodus-logo--lockup { width: min(350px, 80vw); }
 .hero-identity span { font-size: 12px; font-weight: 650; letter-spacing: .06em; color: var(--muted); }
-.eyebrow, .ai-label { background: var(--nodus-white); border-color: var(--line); box-shadow: none; color: var(--ink); border-radius: 7px; }
+.ai-label { background: var(--nodus-white); border-color: var(--line); box-shadow: none; color: var(--ink); border-radius: 7px; }
 .hero h1 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.04em; color: var(--nodus-dark); max-width: 850px; margin-top: 26px; }
 .hero>p { color: var(--muted); }
 .concept-flow { background: var(--nodus-white); border-color: var(--line); box-shadow: var(--shadow-md); backdrop-filter: none; border-radius: 13px; gap: 0; }
@@ -41,6 +43,8 @@ button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .builder-progress span.active, .builder-progress span.done { color: var(--accent); }
 .builder-progress span.done:before { color: var(--accent); }
 .panel-page h2, .loading-view h2 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.025em; color: var(--nodus-dark); }
+/* Onboarding steps, the loading view and the recovery screens title the page with an h1. */
+.panel-page h1, .loading-view h1 { font: 400 34px/1.15 var(--font-display); letter-spacing: -.025em; margin: 18px 0 10px; color: var(--ink); text-wrap: balance; }
 .discovery textarea { background: var(--nodus-white); border-color: var(--line-strong); border-radius: 10px; box-shadow: none; }
 .discovery textarea:focus { border-color: var(--accent); box-shadow: none; }
 .example-row button, .process-map, .suggestion-card { background: var(--nodus-white); border-color: var(--line); box-shadow: none; }
@@ -121,12 +125,17 @@ tbody tr:hover { background: var(--hover) !important; }
 .mode-switch { background: var(--nodus-cream); border-color: var(--line); }
 .mode-switch button[data-state=active], .mode-switch button.active { background: var(--nodus-white); color: var(--accent); }
 .ai-message>span, .assistant-panel>header>div>span { background: var(--accent-soft); color: var(--accent); }
-.ai-message p { background: var(--surface-soft); color: var(--ink-2); }
-.user-message { background: var(--ivory-sunken); color: var(--ink); }
+.ai-message>span { border-radius: var(--radius-sm); }
+.ai-message p { background: var(--surface-soft); color: var(--ink-2); border-radius: var(--radius-md); }
+.user-message { background: var(--ivory-sunken); color: var(--ink); border-radius: var(--radius-md); }
 .prompt-list button, .assistant-input, .drawer-fields input, .drawer-fields select { background: var(--nodus-white); border-color: var(--line); }
 .prompt-list button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
 .record-drawer>footer { background: var(--surface-soft); }
 .drawer-fields .field-error { color: var(--danger-ink); font-size: 12px; }
+/* Form- and request-level errors: danger ink with the reason, never a bare default paragraph. */
+.field-error { color: var(--danger-ink); line-height: 1.45; }
+.assistant-panel div.field-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2) var(--ui-space-3); margin: var(--ui-space-3) 0; padding: var(--ui-space-2) var(--ui-space-3); border: 1px solid var(--danger-line); border-radius: var(--radius-sm); background: var(--danger-soft); font-size: 14px; }
+.assistant-panel div.field-error p { margin: 0; flex: 1 1 200px; }
 .drawer-fields [aria-invalid="true"] { border-color: var(--danger) !important; }
 .tooltip-content { background: var(--nodus-dark); }
 .tooltip-content svg { fill: var(--nodus-dark); }
@@ -180,7 +189,13 @@ tbody tr:hover { background: var(--hover) !important; }
 .global-search { width: min(360px, 36vw); height: var(--ui-control-height); transition: border-color var(--ui-transition-fast), box-shadow var(--ui-transition-fast); }
 .global-search input { min-width: 0; width: 100%; color: var(--ink); }
 .top-actions { gap: var(--ui-space-2); }
-.top-actions button { height: var(--ui-control-height); border-radius: var(--radius-sm); transition: background var(--ui-transition-fast), border-color var(--ui-transition-fast); }
+.top-actions button { height: var(--ui-control-height); border-radius: var(--radius-sm); white-space: nowrap; transition: background var(--ui-transition-fast), border-color var(--ui-transition-fast); }
+/* Radius scale (DESIGN.md): controls 6px, chips and counts 4px. */
+.company-avatar, .global-search { border-radius: var(--radius-sm); }
+.sidebar nav button em { border-radius: var(--radius-xs); }
+/* Long company names stay on one line in the switcher instead of spilling past its border. */
+.workspace-switch > div:not(.company-avatar) { flex: 1; min-width: 0; }
+.workspace-switch strong, .workspace-switch small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .top-actions button:active:not(:disabled) { background: var(--pressed); }
 .permission-badge { white-space: nowrap; }
 
@@ -222,6 +237,9 @@ tbody tr:hover { background: var(--hover) !important; }
 .empty-state { padding: var(--ui-space-8) var(--ui-space-6); }
 .empty-state>svg { color: var(--muted); }
 .empty-state p { line-height: 1.5; }
+/* The recovery action sits centred under its sentence, not at the card's left edge. */
+.empty-state > button { margin: var(--ui-space-4) auto 0; }
+.empty-state > svg { display: block; margin-inline: auto; }
 .loading-view .steps>div { min-height: 44px; padding-block: var(--ui-space-2); transition: color var(--ui-transition-fast); }
 .loading-view .steps>div + div { border-top: 1px solid var(--line-soft); }
 .loading-view .steps .current span { box-shadow: none; }
@@ -280,7 +298,7 @@ tbody tr:hover { background: var(--hover) !important; }
 .record-comment strong { font-size: 12px; }
 .record-comment time { margin-left: var(--ui-space-2); color: var(--muted); font-size: 12px; }
 .record-comment p { margin: 5px 0 0; white-space: pre-wrap; color: var(--ink-2); font-size: 12px; }
-.record-comment-form textarea { min-height: 65px; padding: var(--ui-space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); resize: vertical; }
+.record-comment-form textarea { min-height: 65px; padding: var(--ui-space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); resize: vertical; background: var(--surface); color: var(--ink); }
 .record-comment-form button { justify-self: end; }
 .attachment-row { display: flex; align-items: center; gap: var(--ui-space-1); padding: var(--ui-space-2) 0; border-bottom: 1px solid var(--line-soft); }
 .attachment-row>span { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 12px; }
@@ -392,7 +410,7 @@ tbody tr:hover { background: var(--hover) !important; }
 .popover .column-pop label, .column-pop label { min-height: 30px; margin-block: 2px; cursor: pointer; }
 .column-pop input[type="checkbox"] { accent-color: var(--accent); }
 .ds-select, .drawer-fields input, .drawer-fields select { border-radius: var(--radius-sm); transition: border-color var(--ui-transition-fast), box-shadow var(--ui-transition-fast); }
-.ds-select:hover:not(:disabled), .drawer-fields input:hover:not(:disabled), .drawer-fields select:hover:not(:disabled) { border-color: var(--line-strong); }
+.ds-select:hover:not(:disabled), .drawer-fields input:hover:not(:disabled), .drawer-fields select:hover:not(:disabled) { border-color: var(--anthracite-soft); }
 .ds-select:focus-visible, .drawer-fields input:focus-visible, .drawer-fields select:focus-visible { outline: var(--ui-focus-width) solid var(--accent); outline-offset: 2px; }
 .drawer-overlay, .assistant-overlay { z-index: var(--ui-z-overlay); }
 .record-drawer, .assistant-panel { z-index: var(--ui-z-dialog); box-shadow: var(--shadow-panel); }
@@ -404,13 +422,16 @@ tbody tr:hover { background: var(--hover) !important; }
 .drawer-fields input, .drawer-fields select { min-height: 36px; }
 .record-drawer>footer { gap: var(--ui-space-3); }
 .alert-overlay { z-index: calc(var(--ui-z-dialog) + 1); }
-.confirm-box { z-index: calc(var(--ui-z-dialog) + 2); border-radius: var(--radius-lg); box-shadow: var(--shadow-menu); }
+.confirm-box { z-index: calc(var(--ui-z-dialog) + 2); width: min(440px, calc(100vw - 32px)); padding: var(--ui-space-6); border-radius: var(--radius-lg); box-shadow: var(--shadow-menu); }
+/* Three choices ("Continua a modificare", "Scarta modifiche", "Salva") keep one line each and wrap as whole buttons. */
+.confirm-box > div { flex-wrap: wrap; }
+.confirm-box > div > button { white-space: nowrap; }
 .assistant-panel>header { min-height: 60px; }
 .mode-switch { margin: var(--ui-space-3); }
 .mode-switch button { transition: background var(--ui-transition-fast), color var(--ui-transition-fast); }
 .mode-switch button:focus-visible { outline: var(--ui-focus-width) solid var(--accent); outline-offset: -2px; }
 .assistant-input { border-radius: var(--radius-md); box-shadow: none; }
-.assistant-input textarea { color: var(--ink); }
+.assistant-input textarea { color: var(--ink); background: transparent; }
 .assistant-input button:not(:disabled) { background: var(--accent); }
 .assistant-input button:not(:disabled):hover { background: var(--accent-hover); }
 .prompt-list button, .secondary, .danger-button { transition: background var(--ui-transition-fast), border-color var(--ui-transition-fast); }
@@ -503,7 +524,9 @@ tbody tr:hover { background: var(--hover) !important; }
 
 /* Page headings: a quiet breadcrumb line, a 22px title, actions on the right */
 .page-heading { flex-wrap: wrap; row-gap: var(--ui-space-3); }
-.overline { display: block; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+/* Location path above the page title (DESIGN.md Label role). The uppercase lives in the frozen copy and the
+   QA journey asserts it, so the case stays; the house rule is met with no tracking, label size and muted ink. */
+.overline { display: block; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); } /* taste-skill-ignore */
 .page-heading h1 { margin: 4px 0 2px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .page-heading p { font-size: 14px; }
 .heading-actions { flex-wrap: wrap; }
@@ -592,7 +615,8 @@ tbody tr:hover { background: var(--hover) !important; }
 .kpi-grid .kpi>strong { display: block; margin: 6px 0 4px; color: var(--ink); font: 600 24px/1.2 var(--font-sans); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .kpi-grid .kpi>small { display: block; color: var(--muted); font-size: 12px; }
 .kpi-grid .kpi>small.needs-attention { color: var(--danger-ink); }
-.dashboard-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; margin-top: 0; }
+/* Cards sharing a row share a bottom edge. */
+.dashboard-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: stretch; margin-top: 0; }
 .chart-card .card-heading { gap: var(--ui-space-4); }
 .chart-card .chart-summary { flex-direction: column; align-items: flex-end; gap: 0; margin: 0; text-align: right; }
 .chart-card .chart-summary strong { color: var(--ink); font: 600 22px/1.2 var(--font-sans); font-variant-numeric: tabular-nums; }
@@ -765,7 +789,7 @@ tbody tr:hover { background: var(--hover) !important; }
 .builder-shell .ai-label { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--anthracite-soft); }
 .builder-shell .ai-label span { display: grid; place-items: center; }
 .builder-shell .ai-label .nodus-logo--mark { width: 18px; height: 18px; }
-.builder-shell .panel-page h2, .builder-shell .loading-view h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 3.2vw, 44px); line-height: 1.08; letter-spacing: -.015em; color: var(--ink); margin: 0 0 14px; text-wrap: balance; }
+.builder-shell .panel-page h1, .builder-shell .loading-view h1, .builder-shell .panel-page h2, .builder-shell .loading-view h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 3.2vw, 44px); line-height: 1.08; letter-spacing: -.015em; color: var(--ink); margin: 0 0 14px; text-wrap: balance; }
 .builder-shell .panel-page > p, .builder-shell .split-title p, .builder-shell .loading-view > p { font-size: 17px; line-height: 1.55; color: var(--anthracite-soft); max-width: 60ch; margin: 0 0 32px; }
 .builder-shell .discovery textarea { min-height: 200px; padding: 18px 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--ivory-raised); box-shadow: none; font-size: 16px; line-height: 1.6; color: var(--ink); }
 .builder-shell .discovery textarea::placeholder { color: var(--anthracite-soft); }
@@ -787,7 +811,7 @@ tbody tr:hover { background: var(--hover) !important; }
 .builder-shell .architecture-card.selected { padding: 23px; border: 2px solid var(--bordeaux); background: var(--bordeaux-tint); box-shadow: none; }
 .builder-shell .architecture-card .card-top { font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--anthracite-soft); min-height: 20px; align-items: center; }
 .builder-shell .architecture-card .card-top i { background: var(--bordeaux); color: var(--ivory-raised); }
-.builder-shell .architecture-card h3 { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.1; margin: 14px 0 8px; color: var(--ink); }
+.builder-shell .architecture-card h2, .builder-shell .architecture-card h3 { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.1; margin: 14px 0 8px; color: var(--ink); }
 .builder-shell .architecture-card > p { font-size: 14px; line-height: 1.5; color: var(--anthracite-soft); min-height: 0; margin: 0 0 20px; }
 .builder-shell .module-list span { padding: 4px 8px; border: 0; border-radius: var(--radius-xs); background: var(--ivory-sunken); color: var(--ink); font-size: 13px; }
 .builder-shell .architecture-card ul { margin-top: 20px; }
@@ -801,7 +825,7 @@ tbody tr:hover { background: var(--hover) !important; }
 .builder-shell .suggestion-icon { width: 24px; height: 24px; border-radius: 0; background: none; color: var(--anthracite-soft); margin-top: 2px; }
 .builder-shell .suggestion-icon svg { width: 20px; height: 20px; }
 .builder-shell .suggestion-type { font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--anthracite-soft); }
-.builder-shell .suggestion-card h3 { font: 600 16px/1.35 var(--font-sans); color: var(--ink); margin: 6px 0; }
+.builder-shell .suggestion-card h2, .builder-shell .suggestion-card h3 { font: 600 16px/1.35 var(--font-sans); color: var(--ink); margin: 6px 0; }
 .builder-shell .suggestion-card p { font-size: 14px; line-height: 1.5; color: var(--anthracite-soft); }
 .suggestion-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--ivory-raised); color: var(--ink); font-size: 14px; font-weight: 600; white-space: nowrap; transition: border-color var(--ui-transition-fast), background var(--ui-transition-fast); }
 .suggestion-toggle:hover { border-color: var(--line-hover); }
@@ -827,7 +851,7 @@ tbody tr:hover { background: var(--hover) !important; }
   .builder-shell .builder-progress li + li::before { width: 16px; margin: 0 8px; }
   .builder-shell .panel-page { padding: 32px var(--page-margin) 72px; }
   .builder-shell .step-bar { margin-bottom: 28px; }
-  .builder-shell .panel-page h2, .builder-shell .loading-view h2 { font-size: 28px; }
+  .builder-shell .panel-page h1, .builder-shell .loading-view h1, .builder-shell .panel-page h2, .builder-shell .loading-view h2 { font-size: 28px; }
   .builder-shell .suggestion-card { grid-template-columns: 24px minmax(0, 1fr); padding: 18px 16px; }
   .builder-shell .suggestion-card > .suggestion-toggle, .builder-shell .suggestion-card > .suggestion-tag { grid-column: 2; justify-self: start; }
   .builder-shell .continue { width: 100%; margin-left: 0; }
@@ -838,3 +862,15 @@ tbody tr:hover { background: var(--hover) !important; }
   .landing .hero-line, .landing .hero-lead, .landing .hero .primary, .landing .demo-disclosure, .landing .landing-fragment, .landing .landing-fragment tbody tr,
   .landing .concept-flow h2, .landing .concept-flow li > *, .landing .landing-footer > div, .builder-shell .panel-page { animation: none !important; opacity: 1; transform: none; }
 }
+
+/* Field boundaries (WCAG 1.4.11): every text field, search box, select and composer is outlined at ≥3:1.
+   Kept last so it wins over the scattered resting rules above; :hover, :focus and :focus-within rules
+   are more specific and still take over. Cards, tables and buttons keep the quiet --line rule. */
+.global-search, .table-search, .assistant-input,
+.drawer-fields input, .drawer-fields select, .ds-select, .popover select, .view-name input,
+.import-body select, .import-body input:not([type="file"]), .filter-rule input, .filter-rule select,
+.record-comment-form textarea, .sort-pop select, .kanban-board select, .calendar-view select,
+.workflow-editor-fields input, .workflow-editor-fields select, .smart-entry textarea,
+.ai-entry-preview input, .ai-entry-preview select, .connected-shell input, .connected-shell select,
+.discovery textarea, .builder-shell .discovery textarea { border-color: var(--line-control); }
+.global-search:hover:not(:focus-within), .table-search:hover:not(:focus-within), .assistant-input:hover:not(:focus-within) { border-color: var(--anthracite-soft); }
