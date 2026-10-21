@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T00:00:00Z",
+  "title": "Design System: NODUS",
+  "extensions": {
+    "colorMeta": {
+      "ivory": { "role": "neutral", "displayName": "Ivory paper", "canonical": "#F6F1E8" },
+      "anthracite": { "role": "neutral", "displayName": "Anthracite ink", "canonical": "#231F20" },
+      "bordeaux": { "role": "primary", "displayName": "Bordeaux (interactive only)", "canonical": "#651F32" },
+      "success": { "role": "state", "displayName": "Green", "canonical": "#1F7A50" },
+      "warning": { "role": "state", "displayName": "Amber", "canonical": "#9A5D10" },
+      "danger": { "role": "state", "displayName": "Red-orange", "canonical": "#C2410C" }
+    },
+    "shadows": [
+      { "name": "menu", "value": "0 12px 30px rgba(35, 31, 32, .10)", "purpose": "Dropdowns, popovers, command palette." },
+      { "name": "panel", "value": "-8px 0 32px rgba(35, 31, 32, .08)", "purpose": "Side drawers and the chat panel." }
+    ],
+    "motion": [
+      { "name": "fast", "value": "120ms ease", "purpose": "Hover and small state changes." },
+      { "name": "panel", "value": "180ms cubic-bezier(.2, .8, .2, 1)", "purpose": "Drawers and panels." }
+    ],
+    "breakpoints": [ { "name": "mobile", "value": "390px" }, { "name": "tablet", "value": "768px" }, { "name": "desktop", "value": "1440px" } ]
+  },
+  "components": [
+    { "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "The one main action of a view.", "html": "<button class=\"ds-btn-primary\">Salva record</button>", "css": ".ds-btn-primary{background:#651F32;color:#FBF8F2;height:34px;padding:0 14px;border:0;border-radius:6px;font:600 13px -apple-system,BlinkMacSystemFont,Inter,sans-serif;transition:background 120ms ease}.ds-btn-primary:hover{background:#4D1727}.ds-btn-primary:focus-visible{outline:2px solid #651F32;outline-offset:2px}" },
+    { "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary", "description": "Secondary actions.", "html": "<button class=\"ds-btn-secondary\">Annulla</button>", "css": ".ds-btn-secondary{background:#FBF8F2;color:#231F20;height:34px;padding:0 12px;border:1px solid rgba(35,31,32,.14);border-radius:6px;font:500 13px -apple-system,BlinkMacSystemFont,Inter,sans-serif}.ds-btn-secondary:hover{border-color:rgba(35,31,32,.28)}.ds-btn-secondary:focus-visible{outline:2px solid #651F32;outline-offset:2px}" },
+    { "name": "Text Input", "kind": "input", "refersTo": "input", "description": "Form fields and search.", "html": "<input class=\"ds-input\" placeholder=\"Cerca…\">", "css": ".ds-input{background:#FBF8F2;color:#231F20;height:34px;padding:0 10px;border:1px solid rgba(35,31,32,.14);border-radius:6px;font:400 14px -apple-system,BlinkMacSystemFont,Inter,sans-serif}.ds-input:focus-visible{outline:2px solid #651F32;outline-offset:2px;border-color:#651F32}" },
+    { "name": "Active Nav Item", "kind": "nav", "refersTo": "nav-item-active", "description": "Selected sidebar entry.", "html": "<a class=\"ds-nav\" aria-current=\"page\">Ordini</a>", "css": ".ds-nav{display:block;padding:6px 10px;border-radius:6px;background:rgba(101,31,50,.08);color:#651F32;font:600 14px -apple-system,BlinkMacSystemFont,Inter,sans-serif;text-decoration:none}" },
+    { "name": "Card", "kind": "card", "refersTo": "card", "description": "Flat raised surface for panels and KPI tiles.", "html": "<div class=\"ds-card\"><strong>Record</strong><p>22</p></div>", "css": ".ds-card{background:#FBF8F2;border:1px solid rgba(35,31,32,.14);border-radius:8px;padding:16px;color:#231F20;font:400 14px -apple-system,BlinkMacSystemFont,Inter,sans-serif}" }
+  ],
+  "narrative": {
+    "northStar": "Il registro ben tenuto",
+    "keyCharacteristics": ["Ivory paper, anthracite ink, bordeaux only for action.", "Flat, ruled, tonal layering; elevation only for overlays.", "Precise, lightly rounded forms (4–8px).", "Didot reserved for the wordmark and editorial headlines; system sans for everything functional.", "Legibility floor: body 14px, labels never below 12px."],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Bordeaux means \"you can act here\". Never use it for decoration, headings, illustrations or static badges.", "section": "colors" },
+      { "name": "The Three Inks Rule", "body": "Every colour is ivory, anthracite, bordeaux or a state colour, or a token-defined tone of one of them.", "section": "colors" },
+      { "name": "The Twelve Floor Rule", "body": "No text below 12px anywhere.", "section": "typography" },
+      { "name": "The Didot Reserve Rule", "body": "Didot never appears inside app data screens.", "section": "typography" },
+      { "name": "The Flat Page Rule", "body": "Cards, tables and KPI tiles never carry a shadow at rest.", "section": "elevation" }
+    ]
+  }
+}
