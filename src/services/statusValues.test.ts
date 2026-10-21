@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { analyzeBusiness, deriveAlerts, generateArchitectureOptions, generateWorkspace } from "./aiEngine";
-import { upgradeCompanies } from "./companies";
+import { companyEntities, upgradeCompanies } from "./companies";
 import { statusTone } from "./statusTone";
 import { isStatus, needsAttention, pickStatusOption, sameStatus, CONFIRMED, DELAYED } from "./statusValues";
 import { queryRecords } from "./viewQuery";
@@ -54,10 +54,22 @@ describe("bilingual status values", () => {
     const orders = entity("orders", "Ordini", [], []);
     const configured: Workflow = { ...flow("custom"), config: { entityId: "orders", event: "status", fieldId: "status", conditionFieldId: "status", conditionOperator: "equals", conditionValue: "Confirmed", action: "notify" } };
     expect(workflowApplies(configured, orders, { id: "o", status: "Confermato" }, { id: "o", status: "Bozza" })).toBe(true);
-    expect(sameStatus("In ritardo", "delayed")).toBe(true);
+    expect(sameStatus("In ritardo", "Delayed")).toBe(true);
     expect(sameStatus("Custom", "Custom")).toBe(true);
     expect(sameStatus("Custom", "custom")).toBe(false);
     expect(sameStatus("Confermato", "Consegnato")).toBe(false);
+  });
+
+  it("keeps same-language comparisons exact and only cross-matches translations", () => {
+    for (const [a, b] of [["Done", "Completed"], ["Done", "Complete"], ["Sent", "Submitted"], ["delayed", "Delayed"], ["Completato", "Completata"], ["Confermato", "confermato"]])
+      expect(sameStatus(a, b), `${a} vs ${b}`).toBe(false);
+    for (const [a, b] of [["Delayed", "In ritardo"], ["In ritardo", "Delayed"], ["Confirmed", "Confermato"], ["Confirmed", "Confermata"], ["Done", "Completato"], ["Sent", "Inviata"], ["Delayed", "Delayed"]])
+      expect(sameStatus(a, b), `${a} vs ${b}`).toBe(true);
+  });
+
+  it("does not alert on negated Italian states", () => {
+    for (const value of ["Non in ritardo", "Non scaduto", "non bloccato", "non a rischio", "Non bloccata"]) expect(needsAttention(value), value).toBe(false);
+    for (const value of ["In ritardo", "Scaduto", "Bloccato", "A rischio", "Pagamento in ritardo"]) expect(needsAttention(value), value).toBe(true);
   });
 
   it("filters the delayed-only table view in both languages and picks the stored option", () => {
@@ -92,6 +104,20 @@ describe("Italian demo data", () => {
     expect(companies.fields.find(f => f.id === "status")!.options).toEqual(["Attivo", "Non attivo"]);
     expect(new Set(companies.records.map(r => r.status))).toEqual(new Set(["Attivo"]));
     expect(JSON.stringify(w.entities)).not.toMatch(/London|Nordhaus|Mayfair/);
+  });
+
+  it("picks active and inactive company statuses by meaning, not by option position", () => {
+    for (const [options, active, inactive] of [[["Inactive", "Active"], "Active", "Inactive"], [["Lead", "Active"], "Active", "Non attivo"]] as const) {
+      const a = analyzeBusiness("customers and orders"), w = generateWorkspace(a, generateArchitectureOptions(a)[2]);
+      const schema = companyEntities()[0];
+      schema.fields.find(f => f.id === "status")!.options = [...options];
+      w.entities.unshift(schema);
+      w.entities.find(e => e.id === "customers")!.records[1].status = "Non attivo";
+      const companies = upgradeCompanies(w).entities.find(e => e.id === "companies")!;
+      const byName = (name: string) => companies.records.find(r => r.name === name)?.status;
+      expect(byName("Boutique Aurora"), options.join()).toBe(active);
+      expect(byName("Studio Forma"), options.join()).toBe(inactive);
+    }
   });
 });
 

@@ -1,7 +1,7 @@
 import type { Entity, Field, Workspace } from "../types";
 import { relationsFor } from "../data/templates";
 import { isModuleKind } from "./moduleKinds";
-import { INACTIVE, isStatus } from "./statusValues";
+import { ACTIVE, INACTIVE, isStatus } from "./statusValues";
 
 const text = (id: string, name: string, required = false): Field => ({
   id,
@@ -121,10 +121,15 @@ export function upgradeCompanies(input: Workspace): Workspace {
   );
   // Use the spelling of the companies module being filled: a pre-existing module may
   // still carry the English options ["Active", "Inactive"]; new ones are Italian.
+  // Pick by meaning, never by option position.
   const statusOptions =
     companies.fields.find((f) => f.id === "status")?.options || [];
-  const [activeStatus = "Attivo", inactiveStatus = "Non attivo"] =
-    statusOptions;
+  const inactiveStatus =
+    statusOptions.find((o) => isStatus(o, INACTIVE)) ?? "Non attivo";
+  const activeStatus =
+    statusOptions.find((o) => isStatus(o, ACTIVE)) ??
+    statusOptions.find((o) => !isStatus(o, INACTIVE)) ??
+    "Attivo";
   const mapping = new Map<string, string>();
   for (const source of legacy)
     for (const record of source.records) {
