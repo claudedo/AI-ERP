@@ -56,7 +56,7 @@ export function createFakeDatabase() {
       if (/SELECT payload(,revision)? FROM workspaces WHERE organization_id=\?/.test(text)) return view("workspaces").filter(row => row.organization_id === values[0]);
       if (/FROM attachments a WHERE a\.organization_id=\?/.test(text)) return view("attachments").filter(row => row.organization_id === values[0] && row.status === "ready");
       if (/FROM workflow_events/.test(text)) return [];
-      if (/SELECT \* FROM attachments WHERE organization_id=\? AND id=\?/.test(text)) return view("attachments").filter(row => row.organization_id === values[0] && row.id === values[1]);
+      if (/SELECT \* FROM attachments WHERE organization_id=\?(::uuid)? AND id=\?/.test(text)) return view("attachments").filter(row => row.organization_id === values[0] && row.id === values[1]);
       if (/SELECT id FROM records WHERE organization_id=\?/.test(text)) return view("records").filter(row => row.organization_id === values[0] && row.entity_id === values[1] && row.id === values[2]);
       const write = /^\s*(?:INSERT INTO|UPDATE|DELETE FROM)\s+(\w+|\?)/i.exec(text);
       if (write) { add("writes", { table: write[1], organizationId: values[0] }); return []; }

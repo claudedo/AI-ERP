@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { authenticate, database, HttpError, identity, required, respond, withMembers } from "../../server/platform";
+import { authenticate, database, HttpError, identity, required, respond, verifiedUser, withMembers } from "../../server/platform";
 import { persistWorkspace } from "../../server/repository";
+import { bootstrapOrganization, bootstrapRequestSchema, initialWorkspace } from "../../server/bootstrap";
+import { ChatRateLimit } from "../../server/chatRateLimit";
 import { actionSchema, dispatchWorkspaceAction } from "../../src/services/workspaceActions";
 import { configurationOf, proposalSchema, applyConfigurationOperations } from "../../src/services/configuration";
 import { applicableWorkflows, requirePermission } from "../../src/services/workspaceDomain";
-import { analyzeBusiness, generateArchitectureOptions, generateWorkspace, interpretCommand } from "../../src/services/aiEngine";
+import { interpretCommand } from "../../src/services/aiEngine";
 import { answerOperator } from "../../src/services/operatorEngine";
 import type { Workspace } from "../../src/types";
 import { chatErrorMessage } from "../../src/ai/chatLanguage";
@@ -19,29 +21,42 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("attachmentInit"), entityId: z.string(), recordId: z.string(), filename: z.string().min(1).max(200), mime: z.string().max(150), size: z.number().int().min(0).max(10485760) }).strict(),
   z.object({ action: z.literal("attachmentComplete"), id: z.string().uuid() }).strict(),
   z.object({ action: z.literal("attachmentUrl"), id: z.string().uuid() }).strict(),
-  z.object({ action: z.literal("attachmentDelete"), id: z.string().uuid() }).strict()
+  z.object({ action: z.literal("attachmentDelete"), id: z.string().uuid() }).strict(),
+  bootstrapRequestSchema
 ]);
-export default async function handler(request: Request): Promise<Response> {
+// Enforced by Netlify before any Function instance runs; generous because it covers every API action.
+export const config = { rateLimit: { windowLimit: 300, windowSize: 60, aggregateBy: ["ip", "domain"] } };
+// Self-service bootstrap is far rarer: a stricter per-instance limit, checked before the identity provider is called.
+const bootstrapLimiter = new ChatRateLimit(5);
+const notConfigured = "Il servizio NODUS non è ancora configurato su questo server. Contatta l'amministratore.";
+export default async function handler(request: Request, netlify: { ip?: string } = {}): Promise<Response> {
   try {
     if (!["GET", "POST"].includes(request.method)) throw new HttpError(405, "Method not allowed.");
+    let body: z.infer<typeof requestSchema> | undefined;
+    if (request.method === "POST") {
+      if (!request.headers.get("content-type")?.includes("application/json")) throw new HttpError(415, "Use application/json.");
+      const text = await request.text();
+      if (text.length > 1048576) throw new HttpError(413, "Request exceeds 1 MB.");
+      body = requestSchema.parse(JSON.parse(text));
+    }
+    if (body?.action === "bootstrap") {
+      const client = netlify.ip || request.headers.get("x-nf-client-connection-ip") || "unknown";
+      if (!bootstrapLimiter.accept(client, randomUUID())) throw new HttpError(429, "Troppi tentativi. Riprova tra un minuto.", "rate_limit");
+      // User id comes only from the verified token; the body carries just the validated company/display name.
+      const result = await bootstrapOrganization(database(), await verifiedUser(request), body);
+      return respond(result, result.created ? 201 : 200);
+    }
     const principal = await authenticate(request), sql = database();
     const rows = await sql`SELECT payload FROM workspaces WHERE organization_id=${principal.organizationId}::uuid`;
     let workspace = rows[0] ? await withMembers(rows[0].payload as Workspace, principal) : null;
-    if (request.method === "GET") {
+    if (!body) {
       const attachments = await sql`SELECT a.id,a.entity_id,a.record_id,a.filename,a.mime,a.size,a.status FROM attachments a WHERE a.organization_id=${principal.organizationId}::uuid AND a.status='ready' AND EXISTS(SELECT 1 FROM records r WHERE r.organization_id=a.organization_id AND r.entity_id=a.entity_id AND r.id=a.record_id)`;
       const events = await sql`SELECT id,status,attempts,error,created_at FROM workflow_events WHERE organization_id=${principal.organizationId}::uuid ORDER BY created_at DESC LIMIT 30`;
       return respond({ workspace, organizationId: principal.organizationId, role: principal.roleId, attachments, events, aiConfigured: !!process.env.AI_PROVIDER_URL && !!process.env.AI_PROVIDER_API_KEY });
     }
-    if (!request.headers.get("content-type")?.includes("application/json")) throw new HttpError(415, "Use application/json.");
-    const text = await request.text();
-    if (text.length > 1048576) throw new HttpError(413, "Request exceeds 1 MB.");
-    const body = requestSchema.parse(JSON.parse(text));
     if (body.action === "initialize") {
       if (principal.roleId !== "admin") throw new HttpError(403, "Only an organization admin can initialize a workspace.");
-      const analysis = analyzeBusiness("customers and orders");
-      workspace = generateWorkspace(analysis, generateArchitectureOptions(analysis)[2]);
-      workspace.companyName = body.name; workspace.entities.forEach(entity => { entity.records = []; }); workspace.workflows = []; workspace.alerts = []; workspace.version = 4; workspace.configurationVersion = 1;
-      workspace = await withMembers(workspace, principal);
+      workspace = await withMembers(initialWorkspace(body.name), principal);
       const initial = workspace;
       await sql.begin(async tx => {
         const inserted = await tx`INSERT INTO workspaces(organization_id,payload) VALUES(${principal.organizationId}::uuid,${tx.json(initial as never)}) ON CONFLICT DO NOTHING RETURNING organization_id`;
@@ -77,7 +92,7 @@ export default async function handler(request: Request): Promise<Response> {
     }
     if (body.action === "invite") {
       if (principal.roleId !== "admin") throw new HttpError(403, "Only an organization admin can invite members.");
-      const { data, error } = await identity().auth.admin.inviteUserByEmail(body.email, { redirectTo: required("APP_ORIGIN"), data: { name: body.name } });
+      const { data, error } = await identity().auth.admin.inviteUserByEmail(body.email, { redirectTo: new URL("/?mode=connected", required("APP_ORIGIN")).toString(), data: { name: body.name } });
       if (error || !data.user) throw new HttpError(502, "The identity provider could not send the invitation. Check provider logs and email configuration.");
       await sql`INSERT INTO memberships(organization_id,user_id,role_id,display_name) VALUES(${principal.organizationId}::uuid,${data.user.id}::uuid,${body.role},${body.name}) ON CONFLICT DO NOTHING`;
       await sql`INSERT INTO audit_log(organization_id,actor_id,action,detail) VALUES(${principal.organizationId}::uuid,${principal.userId}::uuid,'invite',${sql.json({ invitedUserId: data.user.id, role: body.role })})`;
@@ -135,6 +150,12 @@ export default async function handler(request: Request): Promise<Response> {
     if (error) throw new HttpError(502, "Private storage could not authorize the download.");
     return respond({ url: data.signedUrl, expiresIn: 60 });
   } catch (error) {
+    if (error instanceof HttpError && error.reason) {
+      if (error.reason === "not_configured") console.error("NODUS API configuration missing");
+      const response = respond({ error: error.reason === "not_configured" ? notConfigured : error.message, reason: error.reason }, error.status);
+      if (error.status === 429) response.headers.set("Retry-After", "60");
+      return response;
+    }
     if (error instanceof HttpError) return respond({ error: chatErrorMessage(error) }, error.status);
     if (error instanceof z.ZodError || error instanceof SyntaxError) return respond({ error: "Richiesta non valida. Nessuna operazione applicata." }, 400);
     if (error instanceof Error && error.constructor.name === "DomainError") return respond({ error: chatErrorMessage(error) }, 403);
