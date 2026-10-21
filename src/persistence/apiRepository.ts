@@ -3,7 +3,8 @@ import type { WorkspaceAction } from "../services/workspaceActions";
 
 export interface RemoteState { workspace: Workspace | null; organizationId: string; role: string; aiConfigured: boolean; attachments: { id: string; entity_id: string; record_id: string; filename: string; mime: string; size: number }[]; events: { id: string; status: string; attempts: number; error?: string }[] }
 export interface AsyncWorkspaceRepository { load(): Promise<RemoteState>; execute(workspace: Workspace, command: WorkspaceAction): Promise<Workspace> }
-export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
+/** `reason` is the server's machine-readable code (no_membership, email_not_confirmed, rate_limit, company_exists, not_configured). */
+export class ApiError extends Error { constructor(public status: number, message: string, public reason?: string) { super(message); } }
 export async function executeWithRecovery(repository: AsyncWorkspaceRepository, workspace: Workspace, command: WorkspaceAction, refreshed: (state: RemoteState) => void) {
   try { return await repository.execute(workspace, command); }
   catch (error) {
@@ -17,9 +18,9 @@ export class ApiWorkspaceRepository implements AsyncWorkspaceRepository {
   async request<T>(body?: unknown): Promise<T> {
     const response = await fetch("/.netlify/functions/api", { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await this.token()}` }, ...(body ? { body: JSON.stringify(body) } : {}) });
     const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) throw new Error("Backend non disponibile. Usa Netlify Dev o configura le Functions pubblicate prima di aprire la modalità connessa.");
+    if (!contentType.includes("application/json")) throw new ApiError(503, "Backend non disponibile. In locale avvia `npm run dev` (include le Functions); online verifica che le Functions siano pubblicate.", "not_configured");
     const data = await response.json();
-    if (!response.ok) throw new ApiError(response.status, data.error || `Errore del servizio (${response.status})`);
+    if (!response.ok) throw new ApiError(response.status, data.error || `Errore del servizio (${response.status})`, typeof data.reason === "string" ? data.reason : undefined);
     return data as T;
   }
   async load() {
