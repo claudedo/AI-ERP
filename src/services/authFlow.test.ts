@@ -1,14 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { EMAIL_NOT_CONFIRMED, authRedirectIssue, isAuthRedirect, signInMessage, signUpMessage, signUpOutcome, signupRedirect } from "./authFlow";
+import { EMAIL_NOT_CONFIRMED, LINK_NEUTRAL, SIGNUP_NEUTRAL, authRedirectIssue, isAuthRedirect, signInMessage, signUpMessage, signUpOutcome, signupRedirect } from "./authFlow";
 
 describe("self-service sign-up messages", () => {
-  it("surfaces an already registered email clearly", () => {
-    expect(signUpMessage({ code: "user_already_exists" })).toMatch(/^Email già registrata/);
-    expect(signUpMessage({ code: "email_exists" })).toMatch(/^Email già registrata/);
-    // With confirmation ON, Supabase answers an existing email with an empty identities list.
-    expect(signUpOutcome({ user: { identities: [] }, session: null })).toBe("already_registered");
+  it("never reveals whether an email is already registered", () => {
+    for (const code of ["user_already_exists", "email_exists"]) expect(signUpMessage({ code })).toBe(SIGNUP_NEUTRAL);
+    expect(SIGNUP_NEUTRAL).toBe("Se l'indirizzo è valido e non ancora registrato, riceverai un'email di conferma.");
+    // With confirmation ON, Supabase answers an existing email with an empty identities list: same neutral path.
+    expect(signUpOutcome({ user: { identities: [] }, session: null })).toBe("confirm_email");
     expect(signUpOutcome({ user: { identities: [{}] }, session: null })).toBe("confirm_email");
     expect(signUpOutcome({ user: { identities: [{}] }, session: {} })).toBe("signed_in");
+  });
+  it("answers magic-link requests neutrally, with or without an account", () => {
+    expect(LINK_NEUTRAL).toBe("Se esiste un account con questa email, riceverai un link di accesso.");
+    for (const code of ["otp_disabled", "signup_disabled", "user_not_found"]) expect(signInMessage({ code }, "link")).toBe(LINK_NEUTRAL);
+    for (const code of ["otp_disabled", "user_not_found", "invalid_credentials", "email_not_confirmed", "weak_password", "x"]) {
+      expect(signInMessage({ code })).not.toMatch(/Non troviamo|già registrat/);
+      expect(signUpMessage({ code })).not.toMatch(/Non troviamo|già registrat/);
+    }
   });
   it("maps weak passwords, rate limits and disabled sign-up to Italian guidance", () => {
     expect(signUpMessage({ code: "weak_password" })).toMatch(/password/i);

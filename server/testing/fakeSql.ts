@@ -15,7 +15,7 @@ const emptyState = (): FakeState => ({ organizations: [], memberships: [], works
 export function createFakeDatabase() {
   let state = emptyState();
   const locks = new Map<string, Promise<void>>();
-  const log = { begins: 0, writesOutsideTransaction: [] as string[], queries: [] as string[] };
+  const log = { begins: 0, writesOutsideTransaction: [] as string[], queries: [] as string[], locks: [] as string[] };
   let failOn: RegExp | undefined;
 
   async function acquire(key: string, releases: (() => void)[]) {
@@ -34,7 +34,7 @@ export function createFakeDatabase() {
       // Yield like a network round trip so concurrent transactions can interleave.
       await Promise.resolve();
       if (failOn?.test(text)) throw Object.assign(new Error("Injected database failure"), { name: "PostgresError" });
-      if (/pg_advisory_xact_lock/.test(text)) { if (!pending) throw new Error("Advisory xact lock outside a transaction"); await acquire(String(values[0]), releases); return [{}]; }
+      if (/pg_advisory_xact_lock/.test(text)) { if (!pending) throw new Error("Advisory xact lock outside a transaction"); log.locks.push(String(values[0])); await acquire(String(values[0]), releases); return [{}]; }
       if (/SELECT \* FROM memberships WHERE user_id=\? AND organization_id=\?/.test(text)) return view("memberships").filter(row => row.user_id === values[0] && row.organization_id === values[1]);
       if (/FROM memberships WHERE user_id=\?/.test(text)) return view("memberships").filter(row => row.user_id === values[0]).sort((a, b) => String(a.organization_id).localeCompare(String(b.organization_id))).slice(0, 1);
       if (/FROM memberships WHERE organization_id=\?/.test(text)) return view("memberships").filter(row => row.organization_id === values[0]);
@@ -88,7 +88,7 @@ export function createFakeDatabase() {
     reset(initial: Partial<FakeState> = {}) {
       state = { ...emptyState(), ...structuredClone(initial) };
       locks.clear(); failOn = undefined;
-      log.begins = 0; log.writesOutsideTransaction = []; log.queries = [];
+      log.begins = 0; log.writesOutsideTransaction = []; log.queries = []; log.locks = [];
     },
     failWhen(pattern: RegExp | undefined) { failOn = pattern; },
   };

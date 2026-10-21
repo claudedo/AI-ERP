@@ -15,7 +15,9 @@ vi.mock("@supabase/supabase-js", () => ({
   }),
 }));
 import { fakeDatabase as db } from "./testing/fakeSql";
-import handler, { config } from "../netlify/functions/api";
+import handler from "../netlify/functions/api";
+import bootstrapHandler, { config } from "../netlify/functions/bootstrap";
+import { userLockKey } from "./bootstrap";
 
 const ALICE = "00000000-0000-4000-8000-00000000a11c", BOB = "00000000-0000-4000-8000-000000000b0b", CAROL = "00000000-0000-4000-8000-0000000ca201", DAVE = "00000000-0000-4000-8000-00000000da5e";
 const ORG_A = "00000000-0000-4000-8000-0000000000aa", ORG_B = "00000000-0000-4000-8000-0000000000bb", ATTACHMENT_B = "00000000-0000-4000-8000-00000000f11e";
@@ -23,15 +25,17 @@ const confirmed = "2026-10-20T10:00:00Z";
 const user = (id: string, email: string, emailConfirmedAt: string | null, metadata: Record<string, unknown> = {}) => ({ id, email, email_confirmed_at: emailConfirmedAt, user_metadata: metadata });
 const workspaceNamed = (companyName: string) => { const a = analyzeBusiness("customers and orders"); return { ...generateWorkspace(a, generateArchitectureOptions(a)[2]), companyName }; };
 
-function call(token: string | null, body?: unknown, options: { organization?: string; ip?: string } = {}) {
-  const url = new URL("https://nodus.test/.netlify/functions/api");
+type CallOptions = { organization?: string; ip?: string | null; fn?: "api" | "bootstrap" };
+function call(token: string | null, body?: unknown, options: CallOptions = {}) {
+  const fn = options.fn || "api", url = new URL(`https://nodus.test/.netlify/functions/${fn}`);
   if (options.organization) url.searchParams.set("organization", options.organization);
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (token) headers.authorization = `Bearer ${token}`;
   const request = new Request(url, body === undefined ? { headers } : { method: "POST", headers, body: JSON.stringify(body) });
-  return handler(request, { ip: options.ip || crypto.randomUUID() });
+  const context = options.ip === null ? {} : { ip: options.ip || crypto.randomUUID() };
+  return (fn === "api" ? handler : bootstrapHandler)(request, context);
 }
-const bootstrap = (token: string, company = "Alfa Srl", extra: Record<string, unknown> = {}, options = {}) => call(token, { action: "bootstrap", company, ...extra }, options);
+const bootstrap = (token: string | null, company = "Alfa Srl", extra: Record<string, unknown> = {}, options: CallOptions = {}) => call(token, { company, ...extra }, { ...options, fn: "bootstrap" });
 
 beforeEach(() => {
   for (const [name, value] of Object.entries({ DATABASE_URL: "postgres://test-only", SUPABASE_URL: "https://identity.test", SUPABASE_SERVICE_ROLE_KEY: "test-only", SUPABASE_STORAGE_BUCKET: "test-only", APP_ORIGIN: "https://nodus.test" })) vi.stubEnv(name, value);
@@ -100,13 +104,13 @@ describe("self-service organization bootstrap", () => {
   });
 
   it("rejects missing or invalid tokens", async () => {
-    expect((await call(null, { action: "bootstrap", company: "Alfa Srl" })).status).toBe(401);
+    expect((await bootstrap(null)).status).toBe(401);
     expect((await bootstrap("forged-token")).status).toBe(401);
     expect(db.state.organizations).toEqual([]);
   });
 
   it("takes the acting user only from the verified token, never from the body or query", async () => {
-    for (const extra of [{ userId: BOB }, { organizationId: ORG_B }, { role: "viewer" }, { user_id: BOB }]) {
+    for (const extra of [{ userId: BOB }, { organizationId: ORG_B }, { role: "viewer" }, { user_id: BOB }, { action: "bootstrap" }]) {
       const response = await bootstrap("token-alice", "Alfa Srl", extra);
       expect(response.status).toBe(400);
     }
@@ -120,6 +124,18 @@ describe("self-service organization bootstrap", () => {
   it("validates and length-limits the company and display names", async () => {
     for (const company of ["", " ", "x".repeat(101), "Alfa\u0000Srl"]) expect((await bootstrap("token-alice", company)).status).toBe(400);
     expect((await bootstrap("token-alice", "Alfa Srl", { name: "n".repeat(101) })).status).toBe(400);
+    expect(db.state.organizations).toEqual([]);
+  });
+
+  it("rejects lone UTF-16 surrogates that jsonb cannot store, but accepts real emoji", async () => {
+    for (const company of ["Alfa \uD800", "\uDC00Alfa", "Alfa \uDC00\uD800 Srl"]) expect((await bootstrap("token-alice", company)).status).toBe(400);
+    expect((await bootstrap("token-alice", "Alfa Srl", { name: "Alice \uD83D" })).status).toBe(400);
+    expect(db.state.organizations).toEqual([]);
+    expect((await bootstrap("token-alice", "Alfa \u{1F33F} Srl")).status).toBe(201);
+  });
+
+  it("is no longer an action of the general API function", async () => {
+    expect((await call("token-alice", { action: "bootstrap", company: "Alfa Srl" })).status).toBe(400);
     expect(db.state.organizations).toEqual([]);
   });
 
@@ -150,7 +166,11 @@ describe("self-service organization bootstrap", () => {
     expect(limited.headers.get("Retry-After")).toBe("60");
     expect(await limited.json()).toMatchObject({ reason: "rate_limit" });
     expect(db.state.organizations).toEqual([]);
-    expect(config.rateLimit).toMatchObject({ windowSize: 60, aggregateBy: ["ip", "domain"] });
+    expect(config.rateLimit).toEqual({ windowLimit: 10, windowSize: 60, aggregateBy: ["ip"] });
+  });
+
+  it("does not lump IP-less callers into one shared in-memory bucket (the Netlify rule covers them)", async () => {
+    for (let attempt = 0; attempt < 8; attempt++) expect((await bootstrap("token-dave", "Delta", {}, { ip: null })).status).toBe(403);
   });
 
   it("signals a missing membership distinctly so the client can offer company creation", async () => {
@@ -213,5 +233,38 @@ describe("tenant isolation for self-service organizations", () => {
     expect(db.state.memberships).toContainEqual({ organization_id: ORG_A, user_id: CAROL, role_id: "operator", display_name: "Carol" });
     const asViewer = await call("token-carol", { action: "invite", email: "x@example.test", name: "X", role: "manager" });
     expect(asViewer.status).toBe(403);
+  });
+
+  it("invite inserts the membership under the same per-user lock as bootstrap, inside a transaction", async () => {
+    identity.invite.mockResolvedValue({ data: { user: { id: CAROL } }, error: null });
+    expect((await call("token-alice", { action: "invite", email: "carol@example.test", name: "Carol", role: "viewer" })).status).toBe(200);
+    expect(db.log.locks).toEqual([userLockKey(CAROL)]);
+    expect(db.log.writesOutsideTransaction.filter(text => /memberships|audit_log/.test(text))).toEqual([]);
+    // A bootstrap serialized after the invite sees the membership and creates nothing.
+    expect(await (await bootstrap("token-carol", "Carol Srl")).json()).toMatchObject({ created: false, organizationId: ORG_A, role: "viewer" });
+    expect(db.log.locks).toEqual([userLockKey(CAROL), userLockKey(CAROL)]);
+    expect(db.state.organizations).toHaveLength(2);
+  });
+
+  it("a bootstrap waiting on the user's lock sees an invite committed meanwhile", async () => {
+    identity.invite.mockResolvedValue({ data: { user: { id: CAROL } }, error: null });
+    let release: (() => void) | undefined;
+    const begin = db.sql.begin as (callback: (tx: (parts: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>) => Promise<unknown>) => Promise<unknown>;
+    const lockWaits = () => db.log.locks.length;
+    const held = begin(async tx => {
+      await tx`SELECT pg_advisory_xact_lock(hashtextextended(${userLockKey(CAROL)}, 0))`;
+      await new Promise<void>(resolve => { release = resolve; });
+    });
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    // Invite queues on Carol's lock first, then bootstrap queues behind it.
+    const invited = call("token-alice", { action: "invite", email: "carol@example.test", name: "Carol", role: "operator" });
+    await vi.waitFor(() => expect(lockWaits()).toBe(2));
+    const boot = bootstrap("token-carol", "Carol Srl");
+    await vi.waitFor(() => expect(lockWaits()).toBe(3));
+    release!(); await held;
+    expect((await invited).status).toBe(200);
+    expect(await (await boot).json()).toMatchObject({ created: false, organizationId: ORG_A, role: "operator" });
+    expect(db.state.memberships.filter(row => row.user_id === CAROL)).toEqual([expect.objectContaining({ organization_id: ORG_A, role_id: "operator" })]);
+    expect(db.state.organizations).toHaveLength(2);
   });
 });
