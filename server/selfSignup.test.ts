@@ -105,6 +105,9 @@ describe("self-service organization bootstrap", () => {
 
   it("rejects missing or invalid tokens", async () => {
     expect((await bootstrap(null)).status).toBe(401);
+    vi.stubEnv("DATABASE_URL", "");
+    expect((await bootstrap(null)).status).toBe(401);
+    vi.stubEnv("DATABASE_URL", "postgres://test-only");
     expect((await bootstrap("forged-token")).status).toBe(401);
     expect(db.state.organizations).toEqual([]);
   });

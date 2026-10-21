@@ -22,7 +22,8 @@ export default async function handler(request: Request, netlify: { ip?: string }
     const client = netlify.ip || request.headers.get("x-nf-client-connection-ip");
     if (client && !limiter.accept(client, randomUUID())) throw new HttpError(429, "Troppi tentativi. Riprova tra un minuto.", "rate_limit");
     // The user id comes only from the verified token; the body carries just the validated names.
-    const result = await bootstrapOrganization(database(), await verifiedUser(request), body);
+    const user = await verifiedUser(request);
+    const result = await bootstrapOrganization(database(), user, body);
     return respond(result, result.created ? 201 : 200);
   } catch (error) {
     if (error instanceof HttpError) {
