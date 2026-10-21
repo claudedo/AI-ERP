@@ -206,19 +206,14 @@ function Application() {
     );
   if (stage === "landing")
     return (
-      <>
-        <Landing onStart={() => leaveStep("discovery")} />
-        <button
-          className="secondary connected-entry"
-          onClick={() => {
-            cancelTransition();
-            setConnected(true);
-            routeTo("connected");
-          }}
-        >
-          Workspace condiviso
-        </button>
-      </>
+      <Landing
+        onStart={() => leaveStep("discovery")}
+        onOpenConnected={() => {
+          cancelTransition();
+          setConnected(true);
+          routeTo("connected");
+        }}
+      />
     );
   if (stage === "workspace" && workspace && visualBuilder)
     return (

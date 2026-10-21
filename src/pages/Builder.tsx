@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -78,6 +78,34 @@ export function Builder({
   persistenceError: string;
 }) {
   const [progress, setProgress] = useState(0);
+  const steps: { label: string; state: "done" | "active" | "" }[] = [
+    { label: "Scopri", state: stage === "discovery" ? "active" : "done" },
+    {
+      label: "Progetta",
+      state:
+        stage === "building"
+          ? "done"
+          : ["architect", "suggestions"].includes(stage)
+            ? "active"
+            : "",
+    },
+    { label: "Crea", state: stage === "building" ? "active" : "" },
+  ];
+  const selectedIndex = options.findIndex((o) => o.id === selected?.id);
+  const onOptionKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const delta =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (!delta || !options.length) return;
+    event.preventDefault();
+    const next = (index + delta + options.length) % options.length;
+    onSelect(options[next]);
+    const group = event.currentTarget.parentElement;
+    (group?.children[next] as HTMLElement | undefined)?.focus();
+  };
   const recommendation =
     analysis?.industry === "consulting"
       ? "Notifica il team quando cambia lo stato di un progetto"
@@ -100,41 +128,41 @@ export function Builder({
         <div className="brand">
           <NodusLogo variant="lockup" />
         </div>
-        <div className="builder-progress">
-          <span className={stage !== "discovery" ? "done" : "active"}>
-            01 Scopri
-          </span>
-          <i />
-          <span
-            className={
-              ["architect", "suggestions", "building"].includes(stage)
-                ? "active"
-                : ""
-            }
-          >
-            02 Progetta
-          </span>
-          <i />
-          <span className={stage === "building" ? "active" : ""}>03 Crea</span>
+        <ol className="builder-progress" aria-label="Avanzamento">
+          {steps.map((step) => (
+            <li
+              key={step.label}
+              className={step.state}
+              aria-current={step.state === "active" ? "step" : undefined}
+            >
+              {step.state === "done" && <Check size={13} aria-hidden="true" />}
+              {step.label}
+            </li>
+          ))}
+        </ol>
+        <div className="onboarding-tools">
+          <button className="restart-link" onClick={onRestart}>
+            Ricomincia e cancella bozza
+          </button>
         </div>
-        <div />
       </header>
-      <div className="onboarding-tools">
-        <button className="text-button" onClick={onRestart}>
-          Ricomincia e cancella bozza
-        </button>
-        {persistenceError && <p role="alert">{persistenceError}</p>}
-      </div>
+      {persistenceError && (
+        <p className="onboarding-alert" role="alert">
+          {persistenceError}
+        </p>
+      )}
       {stage === "discovery" && (
         <section className="discovery panel-page">
-          <button className="back" onClick={onBackToLanding}>
-            <ArrowLeft size={16} /> Indietro
-          </button>
-          <div className="ai-label">
-            <span>
-              <NodusLogo variant="mark" />
-            </span>
-            NODUS ARCHITECT
+          <div className="step-bar">
+            <button className="back" onClick={onBackToLanding}>
+              <ArrowLeft size={16} /> Indietro
+            </button>
+            <div className="ai-label">
+              <span>
+                <NodusLogo variant="mark" />
+              </span>
+              NODUS ARCHITECT
+            </div>
           </div>
           <h2>Raccontami come funziona la tua azienda.</h2>
           <p>
@@ -199,17 +227,19 @@ export function Builder({
       )}
       {stage === "architect" && analysis && (
         <section className="architecture panel-page wide">
-          <button className="back" onClick={onBack}>
-            <ArrowLeft size={16} /> Modifica descrizione
-          </button>
+          <div className="step-bar">
+            <button className="back" onClick={onBack}>
+              <ArrowLeft size={16} /> Modifica descrizione
+            </button>
+            <div className="ai-label">
+              <span>
+                <NodusLogo variant="mark" />
+              </span>
+              MAPPA DELL’AZIENDA
+            </div>
+          </div>
           <div className="split-title">
             <div>
-              <div className="ai-label">
-                <span>
-                  <NodusLogo variant="mark" />
-                </span>
-                MAPPA DELL’AZIENDA
-              </div>
               <h2>Tre modi per strutturare il tuo workspace.</h2>
               <p>
                 Ogni modello supporta la stessa attività. Scegli il livello di
@@ -218,12 +248,23 @@ export function Builder({
             </div>
             <ProcessMap analysis={analysis} />
           </div>
-          <div className="option-grid">
-            {options.map((option) => (
+          <div
+            className="option-grid"
+            role="radiogroup"
+            aria-label="Struttura del workspace"
+          >
+            {options.map((option, index) => (
               <button
                 key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected?.id === option.id}
+                tabIndex={
+                  index === (selectedIndex < 0 ? 0 : selectedIndex) ? 0 : -1
+                }
                 className={`architecture-card ${selected?.id === option.id ? "selected" : ""}`}
                 onClick={() => onSelect(option)}
+                onKeyDown={(event) => onOptionKey(event, index)}
               >
                 <div className="card-top">
                   <span>{option.label}</span>
@@ -274,14 +315,16 @@ export function Builder({
       )}
       {stage === "suggestions" && (
         <section className="suggestions panel-page">
-          <button className="back" onClick={onBackToArchitect}>
-            <ArrowLeft size={16} /> Architettura
-          </button>
-          <div className="ai-label">
-            <span>
-              <NodusLogo variant="mark" />
-            </span>
-            SUGGERIMENTI NODUS
+          <div className="step-bar">
+            <button className="back" onClick={onBackToArchitect}>
+              <ArrowLeft size={16} /> Architettura
+            </button>
+            <div className="ai-label">
+              <span>
+                <NodusLogo variant="mark" />
+              </span>
+              SUGGERIMENTI NODUS
+            </div>
           </div>
           <h2>Due miglioramenti prima di creare il workspace.</h2>
           <p>
@@ -301,16 +344,15 @@ export function Builder({
               </p>
             </div>
             <button
-              className={automation ? "added" : "secondary"}
+              type="button"
+              className="suggestion-toggle"
+              aria-pressed={automation}
               onClick={() => onAutomationChange(!automation)}
             >
-              {automation ? (
-                <>
-                  <Check size={15} /> Aggiunta
-                </>
-              ) : (
-                "Aggiungi automazione"
-              )}
+              <span className="toggle-box" aria-hidden="true">
+                {automation && <Check size={13} />}
+              </span>
+              {automation ? "Aggiunta" : "Aggiungi automazione"}
             </button>
           </div>
           <div className="suggestion-card">
@@ -325,9 +367,7 @@ export function Builder({
                 contatti e sedi collegati.
               </p>
             </div>
-            <span className="added">
-              <Check size={15} /> Consigliato
-            </span>
+            <span className="suggestion-tag">Consigliato</span>
           </div>
           <button className="primary continue" onClick={onBuild}>
             Crea il mio workspace <ArrowRight size={17} />
