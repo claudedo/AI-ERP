@@ -29,7 +29,7 @@ type Stage =
   | "building"
   | "workspace";
 export default function App() {
-  return <NavigationGuardProvider><Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Caricamento di NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
+  return <NavigationGuardProvider><Suspense fallback={<main className="app-loading" role="status" aria-live="polite">Caricamento di NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
 }
 
 function Application() {

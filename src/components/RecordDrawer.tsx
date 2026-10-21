@@ -265,7 +265,7 @@ export function RecordDrawer({
                 )
                 .map((f) =>
                   ["status", "select", "relation"].includes(f.type) ? (
-                    <div className="field" key={f.id}>
+                    <div className={`field field-${f.type}`} key={f.id}>
                       <span>
                         {f.name}
                         {f.required && <em>*</em>}
@@ -278,7 +278,7 @@ export function RecordDrawer({
                       )}
                     </div>
                   ) : (
-                    <label className="field" key={f.id}>
+                    <label className={`field field-${f.type}`} key={f.id}>
                       <span>
                         {f.name}
                         {f.required && <em>*</em>}
