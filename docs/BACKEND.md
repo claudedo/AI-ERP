@@ -2,9 +2,31 @@
 
 No infrastructure is created automatically. Use your approved Supabase and Netlify accounts.
 
-1. Execute `server/migrations/001_platform.sql` once in Supabase SQL Editor, then `server/migrations/002_ai_usage.sql`. They use Supabase's `auth.uid()`, `anon` and `authenticated` roles. The migration ledger records applied versions. Client roles receive tenant-scoped SELECT only; mutation goes through validated Functions. Migration 002 is idempotent and adds a server-only AI quota table; do not rerun migration 001 on an initialized database.
+1. Execute the migrations once each, in order, in Supabase SQL Editor: `server/migrations/001_platform.sql`, `002_ai_usage.sql`, `003_self_signup.sql`. They use Supabase's `auth.uid()`, `anon` and `authenticated` roles. The `nodus_migrations` ledger records applied versions. Client roles receive tenant-scoped SELECT only; mutation goes through validated Functions. 002 and 003 are idempotent; do not rerun 001 on an initialized database.
 2. Create a **private** Storage bucket `nodus-private` with a 10 MB limit. Do not grant public access. Restrict MIME types to business files; exclude active HTML, JavaScript and SVG content.
-3. Configure Supabase Auth email delivery and application redirect allowlists, including `/?mode=connected`. Create the first admin identity through Supabase Auth. Add its UUID to a trusted database membership:
+3. Configure Supabase Auth (Dashboard → Authentication):
+   - **Email provider ON**, "Allow new users to sign up" ON, and **Confirm email MUST be ON**. Bootstrap trusts `email_confirmed_at` from Supabase: with confirmation OFF Supabase marks every address confirmed at sign-up, so anyone could create a company with an email they do not own.
+   - **Pre-account-takeover (pre-hijacking) mitigation:** keep Confirm email ON so an attacker cannot pre-register a victim's address with a known password and wait for it to be used. Supabase does not let an unconfirmed sign-up block the real owner: the owner's confirmation or invite link is what proves control of the mailbox. For invited users, recommend setting a new password (password reset) right after accepting the invitation, so no credential chosen before confirmation survives.
+   - **Rate limits** (Authentication → Rate Limits): set conservative values for *sign-ups and sign-ins* (per IP), *emails sent* (per hour; with custom SMTP choose a value your provider tolerates, e.g. 30–100/h), *token verifications / OTP* (per IP) and *token refreshes*. These are the main brake on sign-up and email abuse; NODUS's own limits only protect company creation.
+   - **URL Configuration**: Site URL = the production origin (e.g. `https://<site>.netlify.app`). **Redirect URLs** allowlist: `https://<site>.netlify.app/?mode=connected`, `https://<site>.netlify.app/?mode=connected&flow=signup` (or `https://<site>.netlify.app/**`) and, for local tests, `http://localhost:5173/**`.
+   - **Email delivery**: the built-in Supabase SMTP is for testing only. It sends **only to addresses of the project's team members** and is heavily rate limited. For real customers configure a custom SMTP (Authentication → SMTP Settings) before opening sign-up.
+4. Set build-time public `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The anonymous/publishable key is intended for browsers and is protected by RLS.
+5. Set server-only Functions variables: `DATABASE_URL` (Supabase transaction pooler, TLS), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `APP_ORIGIN` (trusted full application origin, used for invitation redirects). Never prefix these with `VITE_`. Use `.env.example`; secret files are ignored.
+6. Deploy. No manual SQL is needed for customers: they follow the self-service flow below.
+7. Verify Netlify registers `workflow-worker` as a scheduled Function. It processes at most ten events per invocation, with three attempts maximum. If a record changes before execution, the old event is marked superseded to avoid stale side effects.
+
+## Self-service flow: sign-up → confirm → bootstrap → invite
+
+> **Verification status.** Every step below is covered by automated tests (vitest, with an in-memory transactional fake of Postgres and mocked Supabase Auth). **None of them has been verified live yet** against a real Supabase project: Auth e-mail delivery and confirmation, redirects, the real `email_confirmed_at`, RLS policies and the column grant from migration 003, the advisory lock and `ON CONFLICT (created_by)` on real Postgres, and the Netlify `rateLimit` rules. Steps marked *(non verificato dal vivo)* must pass the [live acceptance checklist](#live-acceptance-checklist-requires-configured-services) before real customers sign up.
+
+1. **Sign-up** *(non verificato dal vivo: invio e-mail di conferma)*. In *Workspace condiviso* (`/?mode=connected`) → *Registrati*: nome, email, password (min. 8), nome azienda. The browser calls Supabase `auth.signUp` with `emailRedirectTo = <origin>/?mode=connected&flow=signup` and `{ name, company }` as user metadata. To prevent account enumeration the answer is always neutral ("Se l'indirizzo è valido e non ancora registrato, riceverai un'email di conferma."), whether or not the address exists; magic-link requests likewise always answer "Se esiste un account con questa email, riceverai un link di accesso.". "Reinvia email di conferma" uses `auth.resend`.
+2. **Confirm** *(non verificato dal vivo: link, redirect, `email_confirmed_at`)*. The confirmation link signs the user in and returns to connected mode. Before confirmation the UI shows "Conferma la tua email per continuare" and the server refuses bootstrap with 403 `email_not_confirmed`.
+3. **Bootstrap** *(non verificato dal vivo: transazione, advisory lock e indice unico su Postgres reale, RLS, rate limit Netlify)*. A signed-in user without any membership receives 403 `no_membership` from GET; the UI then offers *Crea la tua azienda* (prefilled from metadata, editable). POST `/.netlify/functions/bootstrap` with `{ company, name? }` (its own Function, separate from the workspace API) creates, **in one transaction**, the organization (`created_by` = verified user), the `admin` membership and the initialized empty workspace (same as `initialize`), plus an audit entry. The user id comes only from the verified token; the body cannot carry user, organization or role (strict schema, 400); names must be 2–100 (company) / 1–100 (name) printable characters without lone UTF-16 surrogates. A per-user transaction advisory lock (also taken by `invite` around its membership insert, so bootstrap and invitation for the same user serialize) plus the unique index on `organizations.created_by` prevent duplicates under concurrency. If the user already has any membership (e.g. an invited collaborator), nothing is created and the existing organization is returned (200, `created: false`). If the account created an organization it no longer belongs to: 409 `company_exists` ("Hai già un'azienda…").
+4. **Invite** *(non verificato dal vivo: e-mail di invito, accettazione, link scaduto)*. The admin invites colleagues (manager/operator/viewer) from the workspace. The invitation redirects to `APP_ORIGIN/?mode=connected`; the colleague lands directly in the inviter's organization with the invited role and never sees company creation. Expired or reused links (`error_code=otp_expired` in the redirect) show an Italian message asking for a new invite or link; provider text from the URL is never displayed.
+
+Anti-abuse: `netlify/functions/bootstrap.ts` declares a Netlify `config.rateLimit` of 10 requests/minute per IP (enforced before the Function runs). As a second line, a per-warm-instance in-memory limit of 5/minute applies when the client IP is known (429 `rate_limit` with `Retry-After`); IP-less callers are not lumped into a shared bucket and rely on the Netlify rule. `netlify/functions/api.ts` keeps a generous 300/minute per IP and domain for the workspace API. Supabase Auth rate limits (step 3) cover sign-up, emails and OTP. Logs contain only error names, never tokens, emails or company names. A missing server variable answers 503 `not_configured` with an Italian message.
+
+**Operator fallback (optional, not part of the customer procedure).** To attach an existing Auth user to an organization manually (e.g. support recovery), run in SQL Editor:
 
 ```sql
 INSERT INTO organizations(name) VALUES ('Your organization') RETURNING id;
@@ -12,16 +34,35 @@ INSERT INTO memberships(organization_id,user_id,role_id,display_name)
 VALUES ('ORGANIZATION_UUID','AUTH_USER_UUID','admin','Your name');
 ```
 
-4. Set build-time public `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The anonymous/publishable key is intended for browsers and is protected by RLS.
-5. Set server-only Functions variables: `DATABASE_URL` (Supabase transaction pooler, TLS), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `APP_ORIGIN` (trusted full application origin). Never prefix these with `VITE_`. Use `.env.example`; secret files are ignored.
-6. Deploy, sign into Connected workspace and initialize an empty workspace as admin. Invite members there. Provider acceptance of an invitation is reported separately from email delivery.
-7. Verify Netlify registers `workflow-worker` as a scheduled Function. It processes at most ten events per invocation, with three attempts maximum. If a record changes before execution, the old event is marked superseded to avoid stale side effects.
+The admin then initializes the empty workspace from the UI.
+
+**Operator runbook: `409 company_exists`.** A user who created an organization and was later removed from it (membership deleted) can never self-create another one: the unique `created_by` still points at them, so bootstrap answers 409 permanently. After reviewing the case (is the old organization abandoned? should the user be re-invited instead?), release the link:
+
+```sql
+UPDATE organizations SET created_by = NULL WHERE id = '<org uuid>';
+```
+
+The user can then create a new company, or be re-invited into the old one.
+
+## Migration 003
+
+`003_self_signup.sql` adds the nullable `organizations.created_by uuid` column and the unique index `organizations_created_by_key` (one self-service organization per creating user; manual organizations keep NULL and are unaffected), hides `created_by` from clients by replacing the table-wide SELECT grant with `GRANT SELECT (id, name) ON organizations TO authenticated` (exactly the columns members could read before; the `own_organizations` RLS policy is unchanged), re-asserts that `anon`/`authenticated` cannot write `organizations`/`memberships`, sets `lock_timeout = '5s'`, and records version 3. RLS policies and role permissions are unchanged; the server uses `DATABASE_URL` and is unaffected by the column grant. A manual rollback is documented at the end of the file.
+
+## Local testing with real Supabase (dev runner, no netlify-cli)
+
+`npm run dev` serves the app **and** the Functions: a dev-only Vite plugin (`vite.config.ts`, `apply: "serve"`) routes `/.netlify/functions/:name` to the default export of `netlify/functions/:name.ts` via `ssrLoadModule`, with a standard `Request`/`Response`. Server-only variables are read from `.env` into the dev server process only; the browser receives only `VITE_`-prefixed variables. It is never part of `vite build` or `vite preview`.
+
+1. Use a separate Supabase **test** project. Run migrations 001 → 002 → 003 and create the private bucket.
+2. Copy `.env.example` to `.env` and fill `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `APP_ORIGIN=http://localhost:5173`.
+3. In Supabase Auth add `http://localhost:5173/**` to Redirect URLs. With the default SMTP, sign up with an email of a project team member.
+4. `npm run dev`, open `http://localhost:5173/?mode=connected`, register, confirm from the email, create the company, invite a colleague (also a team-member address with the default SMTP).
 
 ## API contract
 
 Endpoint: `/.netlify/functions/api`. All requests require `Authorization: Bearer <Supabase access token>`. The server validates the token and membership. Optional query `organization=<uuid>` only selects an organization the verified user belongs to; the request body cannot supply acting-user, role or tenant overrides.
 
-- GET: workspace, current role, attachment metadata, recent event status and AI availability.
+- GET: workspace, current role, attachment metadata, recent event status and AI availability. A verified user without any organization gets 403 with `reason: "no_membership"`.
+- POST `/.netlify/functions/bootstrap` `{ company, name? }` (separate Function, same Bearer token): self-service creation of organization + admin membership + workspace for a confirmed user without membership (see the flow above). 201 created, 200 already a member, 403 `email_not_confirmed`, 409 `company_exists`, 429 `rate_limit`.
 - POST `{ action: "initialize", name }`: admin-only initialization.
 - POST `{ action: "mutate", expectedRevision, requestId, command }`: atomic validated mutation with a fresh UUID request ID. Commands: configure, stageProposal, publish, applyProposal, configureAndPublish, discardDraft, restoreVersion, saveRecord, deleteRecord, smartEntry, comment, approval. `applyProposal` and `configureAndPublish` include staging and publication in the same transaction. Exact runtime schemas are in `src/services/workspaceActions.ts` and `configuration.ts`.
 - POST `{ action: "invite", email, name, role }`: admin-only invitation (manager/operator/viewer).
@@ -41,11 +82,12 @@ This is a provider-neutral contract, not a direct vendor chat-completion endpoin
 
 ## Live acceptance checklist (requires configured services)
 
-1. Two users in organization A must see the same published module and record after Refresh.
-2. A user in B requesting `?organization=A_UUID` must receive 403. A's record/attachment IDs must not resolve in B. Direct PostgREST reads must obey RLS; client writes must be denied.
-3. Two writes with the same revision: one success, one 409. Repeating a request UUID must not create a second record/event.
-4. Upload, verify no public access, download via authorized signed URL, delete and verify both object and metadata are gone.
-5. A matching record write must enqueue an event, then show complete with one effect. Revoked permission must fail safely; failures retry at most three times. Outputs must not recursively enqueue events.
+1. Sign up a new user, confirm the email, create the company: exactly one organization, one admin membership and one workspace exist; a second click or a reload does not create another. An invited colleague lands in the inviter's organization with the invited role.
+2. Two users in organization A must see the same published module and record after Refresh.
+3. A user in B requesting `?organization=A_UUID` must receive 403. A's record/attachment IDs must not resolve in B. Direct PostgREST reads must obey RLS; client writes must be denied.
+4. Two writes with the same revision: one success, one 409. Repeating a request UUID must not create a second record/event.
+5. Upload, verify no public access, download via authorized signed URL, delete and verify both object and metadata are gone.
+6. A matching record write must enqueue an event, then show complete with one effect. Revoked permission must fail safely; failures retry at most three times. Outputs must not recursively enqueue events.
 
 These integration checks are not claimed as passed without a live test project. Existing unit tests verify domain behavior and membership boundaries, not the hosted providers.
 

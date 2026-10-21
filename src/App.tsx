@@ -15,6 +15,14 @@ import { downloadText } from "./services/importExport";
 import { localWorkspaceRepository } from "./services/workspaceStorage";
 import { dispatchWorkspaceAction } from "./services/workspaceActions";
 import { isModuleKind } from "./services/moduleKinds";
+import { isAuthRedirect } from "./services/authFlow";
+
+// The auth client clears the token hash after sign-in, so `?mode=connected` must keep connected mode;
+// invitation/magic-link redirects (tokens or errors in the hash) always open it.
+const connectedRoute = () =>
+  location.hash === "#connected" ||
+  new URLSearchParams(location.search).get("mode") === "connected" ||
+  isAuthRedirect(location.hash);
 const Builder = lazy(() => import("./pages/Builder").then(module => ({ default: module.Builder })));
 const WorkspaceApp = lazy(() => import("./pages/WorkspaceApp").then(module => ({ default: module.WorkspaceApp })));
 const VisualBuilder = lazy(() => import("./builder/VisualBuilder").then(module => ({ default: module.VisualBuilder })));
@@ -51,11 +59,7 @@ function Application() {
   const [visualBuilder, setVisualBuilder] = useState(
     location.hash === "#builder",
   );
-  const [connected, setConnected] = useState(
-    () =>
-      location.hash === "#connected" ||
-      new URLSearchParams(location.search).get("mode") === "connected",
-  );
+  const [connected, setConnected] = useState(connectedRoute);
   const transition = useRef<ReturnType<typeof setTimeout> | null>(null);
   const generation = useRef(0);
   const cancelTransition = () => {
@@ -71,7 +75,7 @@ function Application() {
       // analysis/build timer must still advance the loading stage.
       if (workspace) cancelTransition();
       setVisualBuilder(location.hash === "#builder");
-      setConnected(location.hash === "#connected");
+      setConnected(connectedRoute());
       if (workspace) setStage("workspace");
     };
     window.addEventListener("hashchange", update);

@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import {
+  ApiError,
   ApiWorkspaceRepository,
   executeWithRecovery,
   type RemoteState,
 } from "../persistence/apiRepository";
+import { ConnectedAuth, CompanySetup, ResendConfirmation } from "../components/ConnectedAuth";
+import { EMAIL_NOT_CONFIRMED, authRedirectIssue, isAuthRedirect } from "../services/authFlow";
 import { ServerConfigurationProvider } from "../ai/configurationProvider";
 import { VisualBuilder } from "../builder/VisualBuilder";
 import { EntityTable } from "../components/EntityTable";
@@ -15,9 +19,25 @@ import { AssistantPanel } from "../components/AssistantPanel";
 
 const publicUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined,
   publicKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Read redirect errors (expired invite/confirmation links) before the auth client consumes the URL.
+const redirectIssue = authRedirectIssue(location.href),
+  confirmedSignup = new URLSearchParams(location.search).get("flow") === "signup";
+// Invitations sent before this change redirect to the bare origin: pin connected mode in the query
+// so it survives the auth client clearing the token hash.
+if (isAuthRedirect(location.hash) && new URLSearchParams(location.search).get("mode") !== "connected")
+  history.replaceState(history.state, "", `${location.pathname}?mode=connected${location.hash}`);
 const auth = publicUrl && publicKey ? createClient(publicUrl, publicKey) : null;
+interface Account { confirmed: boolean; email: string; company: string; name: string }
+const accountOf = (user: User | undefined): Account | null => user ? {
+  confirmed: !!user.email_confirmed_at,
+  email: user.email || "",
+  company: typeof user.user_metadata?.company === "string" ? user.user_metadata.company.slice(0, 100) : "",
+  name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name.slice(0, 100) : "",
+} : null;
 export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
   const [entry,setEntry]=useState(false);
+  const [account, setAccount] = useState<Account | null>(null),
+    [needsCompany, setNeedsCompany] = useState(false);
   const [signedIn, setSignedIn] = useState(false),
     [state, setState] = useState<RemoteState | null>(null),
     [error, setError] = useState(""),
@@ -41,26 +61,47 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       const next = await repository.load();
       current.current = next.workspace;
       setState(next);
+      setNeedsCompany(false);
       setError("");
     } catch (cause) {
+      // A signed-in account without any organization: offer self-service company creation.
+      if (cause instanceof ApiError && cause.reason === "no_membership") { setNeedsCompany(true); setError(""); return; }
       setError(cause instanceof Error ? cause.message : "Connessione non riuscita.");
     }
   };
   useEffect(() => {
     if (!auth) return;
-    void auth.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    const { data } = auth.auth.onAuthStateChange((_event, session) =>
-      setSignedIn(!!session),
-    );
+    // Drop error params from the address bar once captured; keep connected mode.
+    if (redirectIssue) history.replaceState(history.state, "", `${location.pathname}?mode=connected`);
+    void auth.auth.getSession().then(({ data }) => { setSignedIn(!!data.session); setAccount(accountOf(data.session?.user)); });
+    const { data } = auth.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session);
+      setAccount(accountOf(session?.user));
+    });
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => {
     if (signedIn) void refresh();
     else {
       setState(null);
+      setNeedsCompany(false);
       current.current = null;
     }
   }, [signedIn]);
+  const createCompany = async (company: string, name: string) => {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await repository.request<{ created: boolean; message?: string }>({ company, name }, "bootstrap");
+      setNotice(result.created ? "Azienda creata. Sei l'amministratore: puoi invitare i colleghi." : result.message || "");
+      await refresh();
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.reason === "email_not_confirmed") setAccount(previous => previous && { ...previous, confirmed: false });
+      setError(cause instanceof Error ? cause.message : "Creazione dell'azienda non riuscita.");
+    } finally {
+      setBusy(false);
+    }
+  };
   const execute = async (command: WorkspaceAction) => {
     if (!current.current || inFlight.current) return false;
     inFlight.current = true;
@@ -102,57 +143,37 @@ export function ConnectedWorkspace({ onClose }: { onClose: () => void }) {
       <main className="connected-shell">
         <h1>Workspace condiviso</h1>
         <p>
-          Il workspace condiviso non è ancora attivo in questo ambiente. Per usarlo,
-          l’amministratore deve collegare il servizio aziendale e abilitare il tuo account.
-          Puoi continuare nella demo: i dati saranno salvati soltanto in questo browser.
+          Il workspace condiviso non è ancora attivo in questo ambiente: il servizio di
+          registrazione e accesso non è configurato. Puoi continuare nella demo: i dati
+          saranno salvati soltanto in questo browser.
         </p>
         <button className="secondary" onClick={onClose}>
           Torna alla demo locale
         </button>
       </main>
     );
-  if (!signedIn)
+  if (!signedIn) return <ConnectedAuth auth={auth} issue={redirectIssue} onClose={onClose} />;
+  if (needsCompany)
     return (
-      <main className="connected-shell">
-        <h1>Accedi a NODUS</h1>
-        <p>
-          Accedi alla tua organizzazione tramite il provider di identità configurato.
-        </p>
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const email = String(
-              new FormData(event.currentTarget).get("email"),
-            );
-            setBusy(true);
-            const { error } = await auth.auth.signInWithOtp({
-              email,
-              options: {
-                shouldCreateUser: false,
-                emailRedirectTo: `${location.origin}/?mode=connected`,
-              },
-            });
-            setBusy(false);
-            if (error) setError(error.message);
-            else
-              setNotice(
-                "Il provider di identità ha accettato la richiesta di accesso. Controlla la tua email.",
-              );
-          }}
-        >
-          <label>
-            Email
-            <input name="email" type="email" required autoComplete="email" />
-          </label>
-          <button className="primary" disabled={busy}>
-            Invia link di accesso
-          </button>
-        </form>
-        {error && <p role="alert">{error}</p>}
-        {notice && <p role="status">{notice}</p>}
-        <button className="secondary" onClick={onClose}>
-          Demo locale
-        </button>
+      <main className="connected-shell auth-panel">
+        <h1>Benvenuto in NODUS</h1>
+        {account?.confirmed ? (
+          <>
+            {confirmedSignup && <p role="status" className="auth-note">Email confermata.</p>}
+            <CompanySetup defaults={{ company: account.company, name: account.name }} busy={busy} onCreate={(company, name) => void createCompany(company, name)} />
+          </>
+        ) : (
+          <section className="auth-form">
+            <p role="alert" className="auth-error">{EMAIL_NOT_CONFIRMED}</p>
+            <ResendConfirmation auth={auth} email={account?.email || ""} />
+          </section>
+        )}
+        {error && <p role="alert" className="auth-error">{error}</p>}
+        {notice && <p role="status" className="auth-note">{notice}</p>}
+        <div className="auth-actions">
+          <button type="button" className="secondary" onClick={onClose}>Demo locale</button>
+          <button type="button" className="secondary" onClick={() => void auth.auth.signOut()}>Esci</button>
+        </div>
       </main>
     );
   const workspace = state?.workspace,
