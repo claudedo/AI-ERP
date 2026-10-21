@@ -1,9 +1,10 @@
 import type { DataRecord, Entity, ViewFilter } from "../types";
+import { DELAYED, isStatus } from "./statusValues";
 
 export function queryRecords(entity: Entity, search: string, filters: ViewFilter[], sort?: { fieldId: string; direction: "asc" | "desc" }, delayedOnly = false): DataRecord[] {
   const needle = search.trim().toLocaleLowerCase();
   const rows = entity.records.filter(record => {
-    if (delayedOnly && String(record.status || "").toLowerCase() !== "delayed") return false;
+    if (delayedOnly && !isStatus(record.status, DELAYED)) return false;
     if (needle && !entity.fields.some(field => String(record[field.id] ?? "").toLocaleLowerCase().includes(needle))) return false;
     return filters.every(filter => {
       const actual = record[filter.fieldId], expected = filter.value;

@@ -120,7 +120,7 @@ describe("customer journey and unified companies", () => {
       ),
     ).toBe(false);
     const companies = w.entities.find((e) => e.id === "companies")!;
-    expect(companies.records.some((r) => r.name === "Nordhaus")).toBe(true);
+    expect(companies.records.some((r) => r.name === "Boutique Aurora")).toBe(true);
     expect(
       w.entities
         .find((e) => e.id === "orders")!

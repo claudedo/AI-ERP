@@ -6,8 +6,8 @@ import { StatusPill } from "../components/StatusPill";
 // app's own Italian field labels and currency format. Marked data-ui: it is an interface fragment.
 const currency = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const sampleRows = [
-  { reference: "SK-201", address: "18 Montagu Square, London", owner: "Clara Morgan", askingPrice: 2450000, status: "Listed" },
-  { reference: "SK-202", address: "7 Holland Villas, London", owner: "James Park", askingPrice: 1890000, status: "Under offer" },
+  { reference: "SK-201", address: "Via Saragozza 18, Bologna", owner: "Chiara Morandi", askingPrice: 2450000, status: "In vendita" },
+  { reference: "SK-202", address: "Via Santo Stefano 7, Bologna", owner: "Giacomo Parisi", askingPrice: 1890000, status: "Proposta in corso" },
 ];
 
 export function Landing({ onStart, onOpenConnected }: { onStart: () => void; onOpenConnected?: () => void }) {

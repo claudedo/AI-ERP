@@ -14,18 +14,21 @@ const TONES: Record<Exclude<StatusTone, "neutral">, readonly string[]> = {
     "ricevuto", "ricevuta", "pagato", "pagata", "completato", "completata", "consegnato", "consegnata",
     "approvato", "approvata", "venduto", "venduta", "attivo", "attiva", "confermato", "confermata",
     "firmato", "firmata", "accettato", "accettata", "concluso", "conclusa", "evaso", "evasa", "superato", "vinto", "vinta",
+    "superata", "in linea", "rogitato", "launched", "lanciata", "lanciato",
   ],
   warning: [
     "pending", "in progress", "review", "in review", "legal review", "draft", "negotiating", "negotiation",
     "under offer", "on hold", "waiting", "in production", "quality check", "low stock", "awaiting approval",
     "in attesa", "in corso", "in revisione", "bozza", "trattativa", "in trattativa", "in lavorazione",
     "sospeso", "sospesa", "da approvare", "da verificare", "scorte basse",
+    "in sospeso", "proposta in corso", "verifica legale", "in produzione", "scorta bassa",
   ],
   danger: [
     "delayed", "blocked", "overdue", "late", "lost", "declined", "rejected", "cancelled", "canceled",
     "at risk", "failed", "issues found", "urgent", "closed lost", "expired",
     "in ritardo", "ritardo", "bloccato", "bloccata", "scaduto", "scaduta", "perso", "persa",
     "rifiutato", "rifiutata", "annullato", "annullata", "a rischio", "urgente", "fallito", "fallita",
+    "problemi rilevati",
   ],
 };
 

@@ -1,6 +1,7 @@
 import type { Entity, Field, Workspace } from "../types";
 import { relationsFor } from "../data/templates";
 import { isModuleKind } from "./moduleKinds";
+import { INACTIVE, isStatus } from "./statusValues";
 
 const text = (id: string, name: string, required = false): Field => ({
   id,
@@ -35,8 +36,8 @@ export const companyEntities = (): Entity[] => [
         id: "status",
         name: "Stato",
         type: "status",
-        options: ["Active", "Inactive"],
-        defaultValue: "Active",
+        options: ["Attivo", "Non attivo"],
+        defaultValue: "Attivo",
       },
       text("legacyDetails", "Dati originali (migrazione)"),
       text("legacyStatus", "Stato gestionale precedente"),
@@ -118,6 +119,12 @@ export function upgradeCompanies(input: Workspace): Workspace {
   const legacy = next.entities.filter((e) =>
     ["clients", "customers", "suppliers"].includes(e.id),
   );
+  // Use the spelling of the companies module being filled: a pre-existing module may
+  // still carry the English options ["Active", "Inactive"]; new ones are Italian.
+  const statusOptions =
+    companies.fields.find((f) => f.id === "status")?.options || [];
+  const [activeStatus = "Attivo", inactiveStatus = "Non attivo"] =
+    statusOptions;
   const mapping = new Map<string, string>();
   for (const source of legacy)
     for (const record of source.records) {
@@ -150,7 +157,9 @@ export function upgradeCompanies(input: Workspace): Workspace {
           id,
           name: String(record.name || ""),
           partyRole: role,
-          status: record.status === "Inactive" ? "Inactive" : "Active",
+          status: isStatus(record.status, INACTIVE)
+            ? inactiveStatus
+            : activeStatus,
           legacyStatus: String(record.status || ""),
           legacyDetails: JSON.stringify({ module: source.id, record }),
         });
@@ -217,7 +226,7 @@ export function upgradeCompanies(input: Workspace): Workspace {
               id: `company-${record.id}`,
               name,
               partyRole: "Cliente",
-              status: "Active",
+              status: activeStatus,
             };
             companies.records.push(match);
           }
