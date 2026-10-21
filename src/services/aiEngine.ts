@@ -17,6 +17,7 @@ import {
 } from "../data/templates";
 import { isModuleKind } from "./moduleKinds";
 import { localizeTemplateEntity } from "./realEstateLabels";
+import { isStatus, needsAttention, ON_HOLD } from "./statusValues";
 
 const profiles = {
   fashion: {
@@ -62,11 +63,11 @@ const detect = (description: string) =>
     p.terms.some((t) => description.toLowerCase().includes(t)),
   )?.[0] as keyof typeof profiles) || "generic";
 const companyNames: Record<string, string> = {
-  fashion: "Atelier North",
-  furniture: "Forma Works",
-  realestate: "Stone & Key",
-  consulting: "Northstar Advisory",
-  generic: "Your Company",
+  fashion: "Atelier Nord",
+  furniture: "Arredamenti Ferretti",
+  realestate: "Immobiliare Portici",
+  consulting: "Stella Polare Consulenza",
+  generic: "La tua azienda",
 };
 export function analyzeBusiness(description: string, confirmedIndustry?: string): Analysis {
   const industry = confirmedIndustry && confirmedIndustry in profiles ? confirmedIndustry as keyof typeof profiles : detect(description),
@@ -117,11 +118,7 @@ export function generateArchitectureOptions(a: Analysis): ArchitectureOption[] {
 export function deriveAlerts(entities: Entity[]) {
   return entities.flatMap((e) =>
     e.records
-      .filter((r) =>
-        ["delayed", "blocked", "overdue", "at risk"].some((v) =>
-          String(r.status).toLowerCase().includes(v),
-        ),
-      )
+      .filter((r) => needsAttention(r.status))
       .map((r) => ({
         id: `alert-${e.id}-${r.id}`,
         title: `${e.name}: ${String(r.status)}`,
@@ -265,8 +262,8 @@ export function getProposalInapplicability(
           ? "Orders non ha un campo Status."
           : order.fields
                 .find((f) => f.id === "status")
-                ?.options?.includes("On hold")
-            ? "On hold è già uno stato degli ordini."
+                ?.options?.some((option) => isStatus(option, ON_HOLD))
+            ? "In sospeso è già uno stato degli ordini."
             : null;
     case "add-view":
       return !order
@@ -296,8 +293,8 @@ export function createProposal(
       summary: "Crea un campo a scelta che i team possono usare per classificare gli ordini.",
       details: [
         "Campo: Priority",
-        "Opzioni: Low, Normal, High, Urgent",
-        "I record esistenti ricevono Normal",
+        "Opzioni: Bassa, Normale, Alta, Urgente",
+        "I record esistenti ricevono Normale",
       ],
       impact: "Nessun dato esistente verrà rimosso.",
       affectedEntityIds: [order?.id || "orders"],
@@ -352,10 +349,10 @@ export function createProposal(
     },
     "add-status": {
       action: "add-status",
-      title: "Aggiungi lo stato ordine On hold",
+      title: "Aggiungi lo stato ordine In sospeso",
       summary: "Amplia le scelte di stato degli ordini esistenti.",
       details: [
-        "Aggiunge On hold a Orders → Status",
+        "Aggiunge In sospeso a Orders → Status",
         "I valori dei record esistenti non cambiano",
       ],
       impact: "Nessun dato esistente verrà rimosso.",
@@ -424,11 +421,11 @@ export function applyProposal(
       id: "priority",
       name: "Priorità",
       type: "select",
-      options: ["Low", "Normal", "High", "Urgent"],
+      options: ["Bassa", "Normale", "Alta", "Urgente"],
     });
     order.records = order.records.map((r, i) => ({
       ...r,
-      priority: i === 1 ? "High" : "Normal",
+      priority: i === 1 ? "Alta" : "Normale",
     }));
   }
   if (
@@ -453,17 +450,17 @@ export function applyProposal(
           id: "status",
           name: "Status",
           type: "status",
-          options: ["Pending", "Passed", "Issues found"],
+          options: ["In attesa", "Superata", "Problemi rilevati"],
         },
       ],
       records: [
         {
           id: "QC-01",
-          inspection: "Final inspection",
+          inspection: "Ispezione finale",
           batch: "BAT-882",
-          inspector: "Noah King",
+          inspector: "Davide Riva",
           due: "2026-09-29",
-          status: "Pending",
+          status: "In attesa",
         },
       ],
     });
@@ -495,29 +492,29 @@ export function applyProposal(
           id: "paymentTerms",
           name: "Payment terms",
           type: "select",
-          options: ["30 days", "60 days", "90 days"],
+          options: ["30 giorni", "60 giorni", "90 giorni"],
         },
         {
           id: "status",
           name: "Status",
           type: "status",
-          options: ["Approved", "Review", "Inactive"],
+          options: ["Approvato", "In revisione", "Non attivo"],
         },
       ],
       records: [
         {
           id: "SUP-01",
-          name: "Arco Materials",
-          country: "Italy",
-          paymentTerms: "60 days",
-          status: "Approved",
+          name: "Materiali Arco",
+          country: "Italia",
+          paymentTerms: "60 giorni",
+          status: "Approvato",
         },
         {
           id: "SUP-02",
-          name: "Northline Works",
-          country: "Portugal",
-          paymentTerms: "30 days",
-          status: "Review",
+          name: "Officine Lusitane",
+          country: "Portogallo",
+          paymentTerms: "30 giorni",
+          status: "In revisione",
         },
       ],
     });
@@ -532,11 +529,11 @@ export function applyProposal(
             id: "status",
             name: "Status",
             type: "status",
-            options: ["Active", "Prospect"],
+            options: ["Attivo", "Potenziale"],
           },
         ],
         records: [...new Set(order.records.map((r) => String(r.customer)))].map(
-          (name, i) => ({ id: `CUS-${i + 1}`, name, status: "Active" }),
+          (name, i) => ({ id: `CUS-${i + 1}`, name, status: "Attivo" }),
         ),
       });
     const customers = next.entities.find((e) => e.id === "customers")!;
@@ -559,7 +556,7 @@ export function applyProposal(
     next.relations = relationsFor(next.entities);
   }
   if (p.action === "add-status" && order) {
-    order.fields.find((f) => f.id === "status")?.options?.push("On hold");
+    order.fields.find((f) => f.id === "status")?.options?.push(ON_HOLD[1]);
   }
   if (p.action === "add-view" && order)
     next.views.push({

@@ -371,6 +371,18 @@ export function WorkspaceApp({
   return (
     <Tooltip.Provider delayDuration={400} skipDelayDuration={150}>
       <div className="app-shell">
+        {/* Keyboard users skip the sidebar and top bar. Focus is moved by script so the
+            hash router never sees "#main-content" as a route. */}
+        <a
+          className="skip-link"
+          href="#main-content"
+          onClick={(event) => {
+            event.preventDefault();
+            document.getElementById("main-content")?.focus();
+          }}
+        >
+          Salta al contenuto
+        </a>
         {mobileNav && (
           <div
             className="sidebar-scrim"
@@ -663,11 +675,14 @@ export function WorkspaceApp({
             <div className="top-actions">
               <Hint label="Comandi" shortcut="⌘K">
                 <button
-                  className="icon-button"
+                  className="icon-button command-button"
                   aria-label="Apri comandi"
                   onClick={() => setPaletteOpen(true)}
                 >
-                  <Command />
+                  {/* On phones the workspace search field is hidden and this palette is the
+                      way to find records, so it stays, drawn as search instead of ⌘. */}
+                  <Command className="desktop-only" aria-hidden="true" />
+                  <Search className="phone-only" aria-hidden="true" />
                 </button>
               </Hint>
               {permissions.editRecords && (
@@ -774,6 +789,8 @@ export function WorkspaceApp({
               {storageError} Le modifiche restano non salvate in questo browser.
             </div>
           )}
+          <div id="main-content" className="main-anchor" tabIndex={-1} />
+
           {active === "dashboard" && (
             <Dashboard
               workspace={workspace}
@@ -985,7 +1002,7 @@ export function WorkspaceApp({
         <AlertDialog.Root open={confirmReset} onOpenChange={setConfirmReset}>
           <AlertDialog.Portal>
             <AlertDialog.Overlay className="alert-overlay" />
-            <AlertDialog.Content className="confirm-box">
+            <AlertDialog.Content className="confirm-box" aria-modal="true">
               <RotateCcw />
               <AlertDialog.Title>Reimpostare il workspace demo?</AlertDialog.Title>
               <AlertDialog.Description>
@@ -1010,7 +1027,7 @@ export function WorkspaceApp({
             className={`toast ${toastError ? "toast-error" : ""}`}
             role={toastError ? "alert" : "status"}
           >
-            <span>{toastError ? "!" : "✓"}</span>
+            {toastError ? <AlertCircle aria-hidden="true" /> : <Check aria-hidden="true" />}
             {toast}
           </div>
         )}
@@ -1040,7 +1057,7 @@ function HistoryPage({
     <div className="entity-page history-page">
       <div className="page-heading">
         <div>
-          <span className="overline">WORKSPACE / GOVERNANCE</span>
+          <span className="overline">{/* taste-skill-ignore: DESIGN.md overline, frozen copy */}WORKSPACE / GOVERNANCE</span>
           <h1>Cronologia modifiche</h1>
           <p>
             Registro trasparente delle modifiche strutturali proposte e applicate.
@@ -1051,7 +1068,7 @@ function HistoryPage({
         {workspace.changeHistory.map((change) => (
           <article key={change.id}>
             <span className={change.status}>
-              {change.status === "applied" ? "✓" : "×"}
+              {change.status === "applied" ? <Check aria-hidden="true" /> : <X aria-hidden="true" />}
             </span>
             <div>
               <h3>{change.summary}</h3>

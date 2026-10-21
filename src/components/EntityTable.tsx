@@ -7,7 +7,6 @@ import {
   Columns3,
   Download,
   FileUp,
-  Filter,
   LayoutList,
   List,
   ListFilter,
@@ -15,6 +14,7 @@ import {
   PanelRightOpen,
   Plus,
   Search,
+  SlidersHorizontal,
   SortAsc,
   Table2,
   X,
@@ -24,6 +24,7 @@ import { Select } from "./ui/Select";
 import type {
   DataRecord,
   Entity,
+  FieldType,
   View,
   ViewFilter,
   ViewLayout,
@@ -210,24 +211,26 @@ export function EntityTable({
   return (
     <Tooltip.Provider delayDuration={350}>
       <div className="entity-page">
-        <div className="page-heading">
-          <div>
-            <span className="overline">
+        <div className="page-heading entity-heading">
+          <div className="entity-title">
+            <span className="overline">{/* taste-skill-ignore: DESIGN.md overline, frozen copy */}
               WORKSPACE / {entity.name.toUpperCase()}
             </span>
-            <h1>{entity.name}</h1>
-            <p>
-              {entity.records.length} record · {entity.fields.length} campi
-            </p>
+            <div className="entity-title-row">
+              <h1>{entity.name}</h1>
+              <p>
+                {entity.records.length} record · {entity.fields.length} campi
+              </p>
+            </div>
           </div>
           {canEdit && (
             <div className="heading-actions">
-              <button className="secondary" onClick={onImport}>
-                <FileUp size={15} />
+              <button className="secondary quiet" onClick={onImport}>
+                <FileUp size={15} aria-hidden="true" />
                 Importa
               </button>
               {onSmartEntry && (
-                <button className="secondary" onClick={onSmartEntry}>
+                <button className="secondary quiet" onClick={onSmartEntry}>
                   NODUS AI
                 </button>
               )}
@@ -237,14 +240,16 @@ export function EntityTable({
                   className="primary"
                   onClick={() => setDrawer(null)}
                 >
-                  <Plus />
+                  <Plus aria-hidden="true" />
                   Aggiungi record
                 </button>
               )}
             </div>
           )}
         </div>
-        <div className="view-strip">
+        <div className="table-card">
+        <div className="view-strip" role="group" aria-label="Viste">
+          <div className="view-tabs">
           <button
             className={`view-tab ${activeView === "" ? "active" : ""}`}
             aria-pressed={activeView === ""}
@@ -274,6 +279,7 @@ export function EntityTable({
               {v.name}
             </button>
           ))}
+          </div>
           {canEdit && (
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
@@ -281,7 +287,7 @@ export function EntityTable({
                   className="save-view"
                   onClick={() => setSavingView(true)}
                 >
-                  <BookmarkPlus />
+                  <BookmarkPlus aria-hidden="true" />
                   Salva vista
                 </button>
               </Tooltip.Trigger>
@@ -312,10 +318,9 @@ export function EntityTable({
             </div>
           )}
         </div>
-        <div className="table-card">
           <div className="table-tools">
             <div className="table-search">
-              <Search />
+              <Search aria-hidden="true" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -323,6 +328,7 @@ export function EntityTable({
                 aria-label={`Cerca in ${entity.name.toLowerCase()}`}
               />
             </div>
+            <div className="filter-group" role="group" aria-label="Filtri">
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button
@@ -331,7 +337,7 @@ export function EntityTable({
                     statusFilter ? `Filtra, stato ${statusFilter}` : "Filtra"
                   }
                 >
-                  <Filter />
+                  <ListFilter aria-hidden="true" />
                   Filtra{statusFilter && <b>1</b>}
                 </button>
               </Popover.Trigger>
@@ -357,48 +363,10 @@ export function EntityTable({
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
-            {delayedOnly && (
-              <button className="filter-chip" onClick={onClearDelayed}>
-                Solo in ritardo <X />
-              </button>
-            )}
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <button>
-                  <Columns3 />
-                  Colonne <ChevronDown />
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  className="popover column-pop"
-                  sideOffset={7}
-                  align="end"
-                >
-                  {entity.fields.map((f) => (
-                    <label key={f.id}>
-                      <input
-                        type="checkbox"
-                        checked={!hiddenColumns.includes(f.id)}
-                        onChange={() =>
-                          setHiddenColumns((c) =>
-                            c.includes(f.id)
-                              ? c.filter((x) => x !== f.id)
-                              : [...c, f.id],
-                          )
-                        }
-                      />
-                      {f.name}
-                    </label>
-                  ))}
-                  <Popover.Arrow className="popover-arrow" />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
             <Popover.Root>
               <Popover.Trigger asChild>
                 <button className={extraFilters.length ? "filter-chip" : ""}>
-                  <Filter />
+                  <SlidersHorizontal aria-hidden="true" />
                   Altri filtri
                   {extraFilters.length > 0 && <b>{extraFilters.length}</b>}
                 </button>
@@ -510,11 +478,18 @@ export function EntityTable({
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+            </div>
+            {delayedOnly && (
+              <button className="filter-chip" onClick={onClearDelayed}>
+                Solo in ritardo <X aria-hidden="true" />
+              </button>
+            )}
+            <div className="tool-group">
             <Popover.Root>
               <Popover.Trigger asChild>
-                <button>
-                  <SortAsc />
-                  Ordina
+                <button className={sort ? "is-set" : ""}>
+                  <SortAsc aria-hidden="true" />
+                  <span className="tool-label">Ordina</span>
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
@@ -563,6 +538,40 @@ export function EntityTable({
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <button>
+                  <Columns3 aria-hidden="true" />
+                  <span className="tool-label">Colonne</span>
+                  <ChevronDown className="tool-caret" aria-hidden="true" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="popover column-pop"
+                  sideOffset={7}
+                  align="end"
+                >
+                  {entity.fields.map((f) => (
+                    <label key={f.id}>
+                      <input
+                        type="checkbox"
+                        checked={!hiddenColumns.includes(f.id)}
+                        onChange={() =>
+                          setHiddenColumns((c) =>
+                            c.includes(f.id)
+                              ? c.filter((x) => x !== f.id)
+                              : [...c, f.id],
+                          )
+                        }
+                      />
+                      {f.name}
+                    </label>
+                  ))}
+                  <Popover.Arrow className="popover-arrow" />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
             {(!entity.ui || entity.ui.actions.includes("export")) && (
               <button
                 onClick={download}
@@ -572,11 +581,17 @@ export function EntityTable({
                     : "Esporta i risultati filtrati in CSV"
                 }
               >
-                <Download />
-                Esporta{selected.size ? ` (${selected.size})` : ""}
+                <Download aria-hidden="true" />
+                <span className="tool-label">Esporta{selected.size ? ` (${selected.size})` : ""}</span>
               </button>
             )}
-          </div>
+            </div>
+            {selected.size > 0 && (
+              <span className="selection-note">
+                {selected.size} selezionati{" "}
+                <button onClick={() => setSelected(new Set())}>Deseleziona</button>
+              </span>
+            )}
           <div className="layout-strip" role="group" aria-label="Layout dei record">
             {(["table", "list", "kanban", "calendar"] as ViewLayout[]).map(
               (mode) => {
@@ -601,26 +616,22 @@ export function EntityTable({
                           : false
                     }
                     onClick={() => setLayout(mode)}
+                    title={{ table: "Tabella", list: "Elenco", kanban: "Kanban", calendar: "Calendario" }[mode]}
                   >
-                    <Icon size={14} />
-                    {{ table: "Tabella", list: "Elenco", kanban: "Kanban", calendar: "Calendario" }[mode]}
+                    <Icon size={14} aria-hidden="true" />
+                    <span className="layout-label">{{ table: "Tabella", list: "Elenco", kanban: "Kanban", calendar: "Calendario" }[mode]}</span>
                   </button>
                 );
               },
             )}
-            {selected.size > 0 && (
-              <span>
-                {selected.size} selezionati{" "}
-                <button onClick={() => setSelected(new Set())}>Deseleziona</button>
-              </span>
-            )}
+          </div>
           </div>
           <div className={`table-scroll ${layout !== "table" ? "hidden" : ""}`} aria-busy={search !== deferredSearch}>
             <table>
               <thead>
                 <tr>
                   {visibleFields.map((f) => (
-                      <th scope="col" key={f.id}>
+                      <th scope="col" key={f.id} className={isNumeric(f.type) ? "num" : undefined}>
                         {f.name}
                       </th>
                     ))}
@@ -645,7 +656,7 @@ export function EntityTable({
                     }}
                   >
                     {visibleFields.map((f) => (
-                        <td key={f.id}>
+                        <td key={f.id} className={isNumeric(f.type) ? "num" : undefined}>
                           <RecordCell value={r[f.id]} field={f} relations={relationLabels} />
                         </td>
                       ))}
@@ -778,3 +789,6 @@ export function EntityTable({
     </Tooltip.Provider>
   );
 }
+
+/** Numbers and amounts are right-aligned in their column (tabular figures come from the table). */
+const isNumeric = (type: FieldType) => type === "number" || type === "currency";

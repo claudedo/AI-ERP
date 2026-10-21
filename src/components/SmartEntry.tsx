@@ -391,7 +391,7 @@ export function SmartEntry({
       <Dialog.Root open onOpenChange={(open) => !open && guard.requestClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="drawer-overlay" />
-          <Dialog.Content className="smart-entry workflow-editor" aria-describedby="entry-description">{content}</Dialog.Content>
+          <Dialog.Content className="smart-entry workflow-editor" aria-modal="true" aria-describedby="entry-description">{content}</Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
       {guard.confirmation}

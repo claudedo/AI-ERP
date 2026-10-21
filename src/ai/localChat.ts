@@ -10,6 +10,7 @@ import { proposalSchema, type ConfigurationOperation } from "../services/configu
 import { newId } from "../services/workspaceDomain";
 import { localExamples, localQuery } from "./localQueries";
 import { chatErrorMessage } from "./chatLanguage";
+import { DELAYED, pickStatusOption } from "../services/statusValues";
 
 export async function localChat(message: string, workspace: Workspace, contextId?: string): Promise<ChatResponse> {
   const payment = paymentGuard(message, workspace); if (payment) return payment;
@@ -53,7 +54,7 @@ export async function localChat(message: string, workspace: Workspace, contextId
     return { type: proposal.operations.some(op => op.kind === "update") ? "update_proposal" : "entry_proposal", source: "local", message: "Verifica la proposta modificabile. Nessun dato è stato salvato.", proposal };
   }
   const orders = workspace.entities.find(e => /order|ordin/i.test(e.name)), tasks = workspace.entities.find(e => /task|attivit/i.test(e.name));
-  if (/ritard|delayed/i.test(message) && orders) return { type: "query_results", source: "local", message: "Ordini in ritardo", query: { entityId: orders.id, filters: [{ fieldId: "status", operator: "contains", value: "Delayed" }], metric: "count", fieldId: null, groupBy: null } };
+  if (/ritard|delayed/i.test(message) && orders) return { type: "query_results", source: "local", message: "Ordini in ritardo", query: { entityId: orders.id, filters: [{ fieldId: "status", operator: "contains", value: pickStatusOption(orders, DELAYED) }], metric: "count", fieldId: null, groupBy: null } };
   if (/attivit|tasks/i.test(message) && tasks) return { type: "query_results", source: "local", message: "Attività disponibili", query: { entityId: tasks.id, filters: [], metric: "count", fieldId: null, groupBy: null } };
   if (/attenzion|attention/i.test(message)) return { type: "answer", source: "local", message: workspace.alerts.length ? `${workspace.alerts.length} segnalazioni: ${workspace.alerts.slice(0, 4).map(a => a.title).join("; ")}` : "Non risultano segnalazioni urgenti nel workspace." };
   return { type: "unsupported", source: "local", message: `La modalità locale comprende solo alcune richieste basate sul tuo schema. Puoi provare: ${localExamples(workspace).map(example => `«${example}»`).join("; ")}.` };

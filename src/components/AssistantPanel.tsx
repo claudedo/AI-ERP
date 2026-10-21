@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Command, GitBranch, X } from "lucide-react";
+import { ArrowUp, ArrowUpRight, CornerDownLeft, GitBranch, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import type { Workspace } from "../types";
 import { SmartEntry } from "./SmartEntry";
@@ -52,6 +52,14 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
     catch { setError("Conversazione non salvata: memoria del browser insufficiente."); }
   }, [input, messages, entry, structure, excluded, key]);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [messages, entry, structure, busy]);
+  // The composer is disabled while a reply is pending, which drops keyboard focus onto the panel; hand it back when the reply lands.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (busy || !composer || composer.disabled) return;
+    const active = document.activeElement;
+    if (active === document.body || (active instanceof HTMLElement && active.getAttribute("role") === "dialog" && active.contains(composer))) composer.focus();
+  }, [busy]);
   const append = (q: string, a: string, result?: OperatorResult) => setMessages(m => [...m.slice(-29), { q, a, result }]);
   const guard = useCloseGuard(!!input.trim() || pending || busy, onClose);
   const run = async (text = input) => {
@@ -94,7 +102,7 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
   const suggestions = ["Cosa richiede attenzione oggi?", ...(workspace.entities.some(e => /order|ordin/i.test(e.name)) ? ["Quali ordini sono in ritardo?"] : []), ...(canBuild && role.id === "admin" ? ["Crea un modulo Controllo qualità con nome, esito e data"] : [])];
   return <><Dialog.Root open onOpenChange={open => !open && guard.requestClose()}><Dialog.Portal>
     <Dialog.Overlay className="assistant-overlay" />
-    <Dialog.Content className="assistant-panel unified-ai" aria-describedby="assistant-description" onCloseAutoFocus={e => e.preventDefault()} onOpenAutoFocus={e => { e.preventDefault(); (e.currentTarget as HTMLElement).querySelector("textarea")?.focus(); }}>
+    <Dialog.Content className="assistant-panel unified-ai" aria-modal="true" aria-describedby="assistant-description" onCloseAutoFocus={e => e.preventDefault()} onOpenAutoFocus={e => { e.preventDefault(); (e.currentTarget as HTMLElement).querySelector("textarea")?.focus(); }}>
       <header><div><span><NodusLogo variant="mark" /></span><div><Dialog.Title>NODUS AI</Dialog.Title><Dialog.Description id="assistant-description">Una conversazione per tutto il workspace</Dialog.Description></div></div><button aria-label="Chiudi NODUS AI" onClick={guard.requestClose}><X /></button></header>
       <div className="assistant-content" ref={scrollRef} aria-busy={busy}>
         <div className="assistant-capability" role="status">{source === "openai" ? "NODUS AI connesso" : source === "local" ? "Modalità locale temporanea" : "NODUS AI · modifiche solo dopo conferma"}</div>
@@ -109,9 +117,9 @@ export function AssistantPanel({ workspace, setWorkspace, canBuild, onOpenResult
         {structure && <section className="proposal-card"><div className="proposal-label"><GitBranch />PROPOSTA STRUTTURA</div><h3>{structure.interpretation}</h3><p>{structure.impact}</p><p>{reviewed?.operations.length || 0} modifiche selezionate · revisione {structure.baseRevision}</p><StructureOperations proposal={structure} workspace={workspace} excluded={excluded} disabled={busy} onToggle={key => setExcluded(previous => previous.includes(key) ? previous.filter(item => item !== key) : [...previous, key])} />{structure.ambiguities.map(question => <p role="alert" key={question}>{question}</p>)}{!reviewed && !structure.ambiguities.length && <p role="alert">Seleziona almeno un’operazione valida. Controlla dipendenze e revisione del workspace.</p>}<div className="proposal-actions"><button className="secondary" disabled={busy} onClick={() => { setStructure(null); append("Proposta annullata", "Nessuna modifica applicata."); }}>Annulla</button><button className="primary" disabled={busy || !reviewed || !!structure.ambiguities.length || role.id !== "admin"} onClick={() => void confirmStructure()}>Conferma</button></div></section>}
         {busy && <p role="status">NODUS AI sta elaborando…</p>}
         {error && <div role="alert" className="field-error"><p>{error}</p>{input.trim() && <button className="secondary" disabled={busy} onClick={() => void run()}>Riprova</button>}</div>}
-        {!messages.length && !pending && <div className="prompt-list"><label>PROVA A CHIEDERE</label>{suggestions.map(s => <button key={s} disabled={busy} onClick={() => void run(s)}>{s}<span>↗</span></button>)}</div>}
+        {!messages.length && !pending && <div className="prompt-list"><label>PROVA A CHIEDERE</label>{suggestions.map(s => <button key={s} disabled={busy} onClick={() => void run(s)}>{s}<ArrowUpRight aria-hidden="true" /></button>)}</div>}
       </div>
-      <div className="assistant-input"><textarea aria-label="Messaggio per NODUS AI" value={input} maxLength={6000} disabled={busy || (pending && !canClarify)} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void run(); } }} placeholder={pending && !canClarify ? "Conferma o annulla la proposta per continuare" : "Fai una domanda, inserisci dati o descrivi una modifica…"} /><div><span><Command />Invio per inviare · ⇧ Invio a capo</span><button aria-label="Invia messaggio" disabled={!input.trim() || busy || (pending && !canClarify)} onClick={() => void run()}>↑</button></div></div>
+      <div className="assistant-input"><textarea ref={composerRef} aria-label="Messaggio per NODUS AI" value={input} maxLength={6000} disabled={busy || (pending && !canClarify)} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void run(); } }} placeholder={pending && !canClarify ? "Conferma o annulla la proposta per continuare" : "Fai una domanda, inserisci dati o descrivi una modifica…"} /><div><span><CornerDownLeft aria-hidden="true" />Invio per inviare · ⇧ Invio a capo</span><button aria-label="Invia messaggio" disabled={!input.trim() || busy || (pending && !canClarify)} onClick={() => void run()}><ArrowUp aria-hidden="true" /></button></div></div>
     </Dialog.Content>
   </Dialog.Portal></Dialog.Root>{guard.confirmation}</>;
 }

@@ -29,7 +29,7 @@ type Stage =
   | "building"
   | "workspace";
 export default function App() {
-  return <NavigationGuardProvider><Suspense fallback={<main className="panel-page" role="status" aria-live="polite">Caricamento di NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
+  return <NavigationGuardProvider><Suspense fallback={<main className="app-loading" role="status" aria-live="polite">Caricamento di NODUS…</main>}><Application /></Suspense></NavigationGuardProvider>;
 }
 
 function Application() {
@@ -170,7 +170,7 @@ function Application() {
   if (storageError && !workspace)
     return (
       <main className="panel-page storage-recovery" role="alert">
-        <h2>Workspace needs recovery</h2>
+        <h1>Workspace needs recovery</h1>
         <p>{storageError}</p>
         <p>
           Your saved data has not been silently reset. Download the raw copy
@@ -206,19 +206,14 @@ function Application() {
     );
   if (stage === "landing")
     return (
-      <>
-        <Landing onStart={() => leaveStep("discovery")} />
-        <button
-          className="secondary connected-entry"
-          onClick={() => {
-            cancelTransition();
-            setConnected(true);
-            routeTo("connected");
-          }}
-        >
-          Workspace condiviso
-        </button>
-      </>
+      <Landing
+        onStart={() => leaveStep("discovery")}
+        onOpenConnected={() => {
+          cancelTransition();
+          setConnected(true);
+          routeTo("connected");
+        }}
+      />
     );
   if (stage === "workspace" && workspace && visualBuilder)
     return (

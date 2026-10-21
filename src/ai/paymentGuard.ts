@@ -41,7 +41,7 @@ export function paymentGuard(message: string, workspace: Workspace, source: "loc
   for (const field of entity.fields) {
     if (field.type === "date") { const date = absoluteDate(message); if (date) record[field.id] = date; }
     if (field.type === "status" || field.type === "select") {
-      const received = /ricevut/i.test(message) ? field.options?.filter(option => /ricevut|received|paid|pagato|incassat/i.test(option)) : [];
+      const received = /ricevut/i.test(message) ? field.options?.filter(option => /ricevut|received|paid|pagato|pagata|incassat/i.test(option)) : [];
       if (received?.length === 1) record[field.id] = received[0];
     }
   }

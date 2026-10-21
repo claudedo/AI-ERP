@@ -789,7 +789,7 @@ export function VisualBuilder({
       >
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="alert-overlay" />
-          <AlertDialog.Content className="confirm-box">
+          <AlertDialog.Content className="confirm-box" aria-modal="true">
             <AlertDialog.Title>{confirmation?.title}</AlertDialog.Title>
             <AlertDialog.Description>
               {confirmation?.description}

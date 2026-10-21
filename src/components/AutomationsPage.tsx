@@ -38,7 +38,7 @@ export function AutomationsPage({
     <div className="entity-page automations-page">
       <div className="page-heading">
         <div>
-          <span className="overline">WORKSPACE / AUTOMATIONS</span>
+          <span className="overline">{/* taste-skill-ignore: DESIGN.md overline, frozen copy */}WORKSPACE / AUTOMATIONS</span>
           <h1>Automazioni</h1>
           <p>
             {workflows.filter((w) => w.active).length} workflow attivi ·{" "}

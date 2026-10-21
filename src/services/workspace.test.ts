@@ -23,7 +23,7 @@ describe("import and data validation", () => {
 
   it("previews skipped rows and imports valid records without overwriting a duplicate", () => {
     const w = workspace();
-    const sheet = parseCsv("Customer;Value;Status\nNordhaus;1200;Active\nNew Atelier;2.450,50;Active\nBad Atelier;not a number;Active\n");
+    const sheet = parseCsv("Customer;Value;Status\nBoutique Aurora;1200;Attivo\nNew Atelier;2.450,50;Attivo\nBad Atelier;not a number;Attivo\n");
     const plan = { sheet, entityId: "customers", mappings: [{ column: 0, fieldId: "name", type: "text" as const }, { column: 1, fieldId: "lifetimeValue", type: "currency" as const }, { column: 2, fieldId: "status", type: "status" as const }], duplicateFieldId: "name", duplicateStrategy: "skip" as const };
     const preview = previewImport(plan, w);
     expect(preview.accepted).toBe(1);
@@ -35,7 +35,7 @@ describe("import and data validation", () => {
 
   it("enforces relation integrity and role permissions for record writes", () => {
     const w = workspace();
-    expect(() => saveRecord(w, "orders", { id: "NEW-1", orderNo: "NEW-1", customer: "missing", status: "Draft" })).toThrow(DomainError);
+    expect(() => saveRecord(w, "orders", { id: "NEW-1", orderNo: "NEW-1", customer: "missing", status: "Bozza" })).toThrow(DomainError);
     w.currentUserId = "usr-viewer";
     expect(() => saveRecord(w, "customers", { id: "NEW-2", name: "New" })).toThrow(/ruolo demo/);
   });
@@ -52,7 +52,7 @@ describe("import and data validation", () => {
 describe("views, workflows and AI changes", () => {
   it("combines search, filters and numeric sorting", () => {
     const entity = workspace().entities.find(e => e.id === "orders")!;
-    const filtered = queryRecords(entity, "ORD", [{ fieldId: "status", operator: "not-equals", value: "Draft" }], { fieldId: "value", direction: "desc" });
+    const filtered = queryRecords(entity, "ORD", [{ fieldId: "status", operator: "not-equals", value: "Bozza" }], { fieldId: "value", direction: "desc" });
     expect(filtered.map(row => row.id)).toEqual(["ORD-1047", "ORD-1048"]);
   });
 

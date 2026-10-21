@@ -71,7 +71,7 @@ export function useCloseGuard(
     >
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="alert-overlay" />
-        <AlertDialog.Content className="confirm-box">
+        <AlertDialog.Content className="confirm-box" aria-modal="true">
           <AlertDialog.Title>Modifiche non salvate</AlertDialog.Title>
           <AlertDialog.Description>
             Scegli se continuare, salvare o scartare le modifiche.

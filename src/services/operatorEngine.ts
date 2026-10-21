@@ -7,7 +7,7 @@ export function answerOperator(action: AiAction, workspace: Workspace): Operator
   const orders = workspace.entities.find(entity => isModuleKind(entity, "orders"));
   if (action.type === "filter-delayed") {
     const records = orders?.records.filter(record => /delayed|late|ritard/i.test(String(record.status || ""))) || [];
-    return { answer: orders ? `${records.length} ordini in ritardo trovati nei record attuali.` : "Questo workspace non ha un modulo Ordini.", criteria: "Ordini con stato contenente Delayed, Late o Ritardo", count: records.length, records: orders ? records.map(record => ({ entityId: orders.id, recordId: record.id, label: label(orders, record) })) : [] };
+    return { answer: orders ? `${records.length} ordini in ritardo trovati nei record attuali.` : "Questo workspace non ha un modulo Ordini.", criteria: "Ordini con stato contenente In ritardo, Delayed o Late", count: records.length, records: orders ? records.map(record => ({ entityId: orders.id, recordId: record.id, label: label(orders, record) })) : [] };
   }
   if (action.type === "pending-approvals") {
     const pending = (workspace.approvals || []).filter(approval => approval.status === "pending");

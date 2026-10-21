@@ -198,6 +198,7 @@ export function RecordDrawer({
           <Dialog.Overlay className="drawer-overlay" />
           <Dialog.Content
             className="record-drawer"
+            aria-modal="true"
             aria-describedby="record-drawer-description"
             onCloseAutoFocus={(event) => event.preventDefault()}
           >
@@ -265,7 +266,7 @@ export function RecordDrawer({
                 )
                 .map((f) =>
                   ["status", "select", "relation"].includes(f.type) ? (
-                    <div className="field" key={f.id}>
+                    <div className={`field field-${f.type}`} key={f.id}>
                       <span>
                         {f.name}
                         {f.required && <em>*</em>}
@@ -278,7 +279,7 @@ export function RecordDrawer({
                       )}
                     </div>
                   ) : (
-                    <label className="field" key={f.id}>
+                    <label className={`field field-${f.type}`} key={f.id}>
                       <span>
                         {f.name}
                         {f.required && <em>*</em>}
@@ -344,7 +345,7 @@ export function RecordDrawer({
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>
                     <AlertDialog.Overlay className="alert-overlay" />
-                    <AlertDialog.Content className="confirm-box">
+                    <AlertDialog.Content className="confirm-box" aria-modal="true">
                       <AlertTriangle />
                       <AlertDialog.Title>Eliminare questo record?</AlertDialog.Title>
                       <AlertDialog.Description>

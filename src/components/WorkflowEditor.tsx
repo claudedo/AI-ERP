@@ -97,6 +97,7 @@ function WorkflowEditorForm({
         <Dialog.Overlay className="alert-overlay" />
         <Dialog.Content
           className="workflow-editor"
+          aria-modal="true"
           aria-describedby="workflow-editor-description"
         >
           <header>

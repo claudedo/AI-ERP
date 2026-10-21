@@ -4,6 +4,7 @@ import { calculateFields } from "./formulas";
 import { isCompanyEntity, normalizedVat } from "./companies";
 import { isModuleKind } from "./moduleKinds";
 import { localizeTemplateEntity } from "./realEstateLabels";
+import { CONFIRMED, DELAYED, isStatus, ON_HOLD, sameStatus } from "./statusValues";
 
 export class DomainError extends Error {}
 export const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -70,10 +71,11 @@ export function workflowApplies(flow: Workflow, entity: Entity, record: DataReco
       shouldRun = config.entityId === entity.id && (config.event === "create" ? !previous : config.event === "update" ? Boolean(previous && (!config.fieldId || changed(config.fieldId))) : Boolean(previous && changed(config.fieldId || "status")));
       if (shouldRun && config.conditionFieldId) {
         const actual = record[config.conditionFieldId];
-        shouldRun = config.conditionOperator === "greater-than" ? Number(actual) > Number(config.conditionValue) : String(actual ?? "") === String(config.conditionValue ?? "");
+        // Status-like values match across languages: "Confirmed" also matches "Confermato" (old and new workspaces).
+        shouldRun = config.conditionOperator === "greater-than" ? Number(actual) > Number(config.conditionValue) : sameStatus(actual, config.conditionValue);
       }
-    } else if (flow.id === "confirmed-order-task") shouldRun = isModuleKind(entity, "orders") && record.status === "Confirmed" && previous?.status !== "Confirmed";
-    else if (flow.id === "delayed-delivery-alert") shouldRun = isModuleKind(entity, "deliveries") && record.status === "Delayed" && previous?.status !== "Delayed";
+    } else if (flow.id === "confirmed-order-task") shouldRun = isModuleKind(entity, "orders") && isStatus(record.status, CONFIRMED) && !isStatus(previous?.status, CONFIRMED);
+    else if (flow.id === "delayed-delivery-alert") shouldRun = isModuleKind(entity, "deliveries") && isStatus(record.status, DELAYED) && !isStatus(previous?.status, DELAYED);
     else if (flow.id === "high-value-approval") shouldRun = isModuleKind(entity, "orders") && valueOf(entity, record) > 20000 && (!previous || valueOf(entity, previous) <= 20000);
   return shouldRun;
 }
@@ -89,13 +91,13 @@ export function runWorkflows(w: Workspace, entity: Entity, record: DataRecord, p
       if (action === "create-task") {
         let target = w.entities.find(e => e.id === config?.targetEntityId) || w.entities.find(e => e.id === "tasks" || isModuleKind(e, "operations"));
         if (!target && !config) {
-          target = localizeTemplateEntity({ id: "tasks", name: "Tasks", fields: [{ id: "name", name: "Task", type: "text" }, { id: "sourceRecord", name: "Source record", type: "text" }, { id: "owner", name: "Owner", type: "text" }, { id: "due", name: "Due date", type: "date" }, { id: "status", name: "Status", type: "status", options: ["To do", "In progress", "Done"] }], records: [] });
+          target = localizeTemplateEntity({ id: "tasks", name: "Tasks", fields: [{ id: "name", name: "Task", type: "text" }, { id: "sourceRecord", name: "Source record", type: "text" }, { id: "owner", name: "Owner", type: "text" }, { id: "due", name: "Due date", type: "date" }, { id: "status", name: "Status", type: "status", options: ["Da fare", "In corso", "Completata"] }], records: [] });
           w.entities.push(target);
         }
         if (!target) throw new DomainError("Il modulo di destinazione delle attività non esiste.");
         if (!target.records.some(r => r.sourceRecord === record.id)) {
           const task: DataRecord = { id: newId("task") };
-          for (const field of target.fields) task[field.id] = field.defaultValue ?? (field.id === "name" ? `Prepare ${record.orderNo || record.id}` : field.id === "sourceRecord" || field.type === "relation" && field.relationEntityId === entity.id ? record.id : field.id === "owner" ? String(record.owner || "") : field.id === "due" ? String(record.delivery || "") : field.type === "status" ? field.options?.[0] || "To do" : field.type === "checkbox" ? false : "");
+          for (const field of target.fields) task[field.id] = field.defaultValue ?? (field.id === "name" ? `Prepara ${record.orderNo || record.id}` : field.id === "sourceRecord" || field.type === "relation" && field.relationEntityId === entity.id ? record.id : field.id === "owner" ? String(record.owner || "") : field.id === "due" ? String(record.delivery || "") : field.type === "status" ? field.options?.[0] || "Da fare" : field.type === "checkbox" ? false : "");
           const errors = validateRecord(w, target, task);
           if (Object.keys(errors).length) throw new DomainError(Object.values(errors).join(" "));
           target.records.unshift(task);
@@ -273,7 +275,7 @@ export function undoAiChange(w: Workspace, changeId: string): Workspace {
   if (change.action === "add-quality") { next.entities = next.entities.filter(e => e.id !== "quality-control"); next.relations = next.relations.filter(r => r.fromEntityId !== "quality-control" && r.toEntityId !== "quality-control"); }
   if (change.action === "add-suppliers") next.entities = next.entities.filter(e => e.id !== "suppliers");
   if (change.action === "add-approval") { next.workflows = next.workflows.filter(flow => flow.id !== "high-value-approval"); next.approvals = (next.approvals || []).filter(approval => approval.workflowId !== "high-value-approval"); }
-  if (change.action === "add-status") { const field = order?.fields.find(f => f.id === "status"); if (field) field.options = field.options?.filter(option => option !== "On hold"); }
+  if (change.action === "add-status") { const field = order?.fields.find(f => f.id === "status"); if (field) field.options = field.options?.filter(option => !isStatus(option, ON_HOLD)); }
   if (change.action === "add-view") next.views = next.views.filter(view => !(view.entityId === order?.id && view.name === "Orders to review"));
   next.changeHistory.find(item => item.id === changeId)!.status = "reverted";
   next.revision = (w.revision || 0) + 1;

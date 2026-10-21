@@ -1,51 +1,96 @@
+/* NODUS tokens — the only file allowed to hold literal colour values.
+   Ivory paper (~60%), anthracite ink (~30%), bordeaux only where the user can act (~10%),
+   plus three fixed state colours. Every other stylesheet and component reads these variables. */
 :root {
   --font-sans: -apple-system, BlinkMacSystemFont, Inter, "Helvetica Neue", Arial, sans-serif;
   --font-display: Didot, "Bodoni 72", "Times New Roman", serif;
 
-  --nodus-bordeaux: #651F32;
-  --nodus-dark: #32101A;
-  --nodus-cream: #F4EBDD;
-  --nodus-sand: #E8DACA;
-  --nodus-rose: #B9828F;
-  --nodus-white: #FFFCF7;
-  --nodus-muted: #71666A;
-  --nodus-line: rgba(101, 31, 50, .14);
+  /* ---- Brand primitives (DESIGN.md) ---- */
+  --ivory: #F6F1E8;
+  --ivory-raised: #FBF8F2;
+  --ivory-sunken: #EFE8DC;
+  --anthracite: #231F20;
+  --anthracite-soft: #5E5859;
+  --line: rgba(35, 31, 32, .14);
+  --line-soft: rgba(35, 31, 32, .08);
+  --line-strong: rgba(35, 31, 32, .28);
+  --line-hover: rgba(35, 31, 32, .42);
+  /* Boundary of text fields and selects: ≥3:1 on ivory, raised and sunken ivory (WCAG 1.4.11). */
+  --line-control: rgba(35, 31, 32, .52);
+  --bordeaux: #651F32;
+  --bordeaux-deep: #4D1727;
+  --bordeaux-tint: rgba(101, 31, 50, .08);
+  --bordeaux-tint-strong: rgba(101, 31, 50, .14);
+  --bordeaux-line: rgba(101, 31, 50, .32);
 
-  --ink: var(--nodus-dark);
-  --ink-2: #543F45;
-  --muted: var(--nodus-muted);
-  --muted-2: #97898D;
-  --canvas: #F9F5EF;
-  --surface: var(--nodus-white);
-  --surface-soft: #F8F1E8;
-  --surface-sunken: var(--nodus-cream);
-  --surface-raised: var(--nodus-white);
-  --sidebar: var(--nodus-cream);
-  --line: var(--nodus-line);
-  --line-soft: rgba(101, 31, 50, .09);
-  --line-strong: rgba(101, 31, 50, .24);
-  --accent: var(--nodus-bordeaux);
-  --accent-hover: #4D1727;
-  --accent-soft: #F4E8E9;
-  --accent-line: #D8BFC4;
-  --accent-ink: var(--nodus-white);
+  /* ---- Fixed state colours, their light tints and their text inks (≥4.5:1 on the tint) ---- */
+  --success: #1F7A50;
+  --warning: #9A5D10;
+  --danger: #C2410C;
+  --success-ink: #17603F;
+  --warning-ink: #7A4A0C;
+  --danger-ink: #9C3409;
+  --success-soft: rgba(31, 122, 80, .12);
+  --warning-soft: rgba(154, 93, 16, .12);
+  --danger-soft: rgba(194, 65, 12, .10);
+  --success-line: rgba(31, 122, 80, .32);
+  --warning-line: rgba(154, 93, 16, .32);
+  --danger-line: rgba(194, 65, 12, .32);
+
+  /* ---- Anthracite tones for hover, pressed, scrims and shadows ---- */
+  --anthracite-a04: rgba(35, 31, 32, .04);
+  --anthracite-a06: rgba(35, 31, 32, .06);
+  --anthracite-a10: rgba(35, 31, 32, .10);
+  --scrim: rgba(35, 31, 32, .32);
+
+  /* ---- Legacy names, remapped onto the brand ---- */
+  --nodus-bordeaux: var(--bordeaux);
+  --nodus-dark: var(--anthracite);
+  --nodus-cream: var(--ivory-sunken);
+  --nodus-sand: var(--ivory-sunken);
+  --nodus-rose: var(--anthracite-soft);
+  --nodus-white: var(--ivory-raised);
+  --nodus-muted: var(--anthracite-soft);
+  --nodus-line: var(--line);
+
+  --ink: var(--anthracite);
+  --ink-2: var(--anthracite);
+  --muted: var(--anthracite-soft);
+  --muted-2: var(--anthracite-soft);
+  --canvas: var(--ivory);
+  --surface: var(--ivory-raised);
+  --surface-soft: var(--ivory);
+  --surface-sunken: var(--ivory-sunken);
+  --surface-raised: var(--ivory-raised);
+  --sidebar: var(--ivory-sunken);
+  --accent: var(--bordeaux);
+  --accent-hover: var(--bordeaux-deep);
+  --accent-soft: var(--bordeaux-tint);
+  --accent-line: var(--bordeaux-line);
+  --accent-ink: var(--ivory-raised);
   --panel: var(--surface);
   --soft: var(--surface-soft);
   --blue: var(--accent);
   --blue2: var(--accent-hover);
-  --hover: rgba(101, 31, 50, .045);
-  --pressed: rgba(101, 31, 50, .085);
-  --selected: var(--accent-soft);
-  --focus-ring: 0 0 0 3px rgba(101, 31, 50, .18);
+  --hover: var(--anthracite-a04);
+  --pressed: var(--anthracite-a10);
+  --selected: var(--bordeaux-tint);
+  /* Ring drawn as a shadow only where a container shows focus for the field inside it
+     (search boxes, chat composer, open selects). Elements themselves use the outline in nodus.css. */
+  --focus-ring: 0 0 0 2px var(--ivory-raised), 0 0 0 4px var(--bordeaux);
   --disabled-opacity: .46;
-  --radius-xs: 5px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 13px;
-  --shadow-sm: 0 1px 2px rgba(50, 16, 26, .035);
-  --shadow-md: 0 8px 25px rgba(50, 16, 26, .055);
-  --shadow-menu: 0 12px 30px rgba(50, 16, 26, .10);
-  --shadow-panel: -8px 0 32px rgba(50, 16, 26, .08);
+  /* Radius scale from DESIGN.md: 4px chips, 6px controls, 8px cards, panels and dialogs.
+     --radius-lg is kept as a name for dialogs and maps onto the 8px card radius. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-chip: 4px;
+  /* Resting surfaces carry no shadow (Flat Page Rule); --shadow-sm is kept as a name and is empty. */
+  --shadow-sm: none;
+  --shadow-md: 0 8px 24px rgba(35, 31, 32, .06);
+  --shadow-menu: 0 12px 30px rgba(35, 31, 32, .10);
+  --shadow-panel: -8px 0 32px rgba(35, 31, 32, .08);
 
   /* Workspace rhythm and interaction tokens; brand colors above stay unchanged. */
   --ui-space-1: 4px;

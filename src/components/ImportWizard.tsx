@@ -173,6 +173,7 @@ function ImportWizardForm({
         <Dialog.Overlay className="alert-overlay" />
         <Dialog.Content
           className="import-dialog"
+          aria-modal="true"
           aria-describedby="import-description"
         >
           <header>
